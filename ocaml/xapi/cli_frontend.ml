@@ -1140,7 +1140,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
     {
       reqd=[];
       optn=["live"; "host"; "host-uuid"; "encrypt"; "force"];
-      help="Migrate the selected VM(s). The parameter '--live' will migrate the VM without shutting it down. The 'host' parameter matches can be either the name or the uuid of the host. The parameter '--encrypt' will encrypt the memory image transfer.";
+      help="Migrate the selected VM(s). The parameter '--live' will migrate the VM without shutting it down. The 'host' parameter matches can be either the name or the uuid of the host. The memory image transfer will be encrypted unless the parameter 'encrypt=false' is given.";
       implementation= No_fd Cli_operations.vm_migrate;
       flags=[Standard; Vm_selectors];
     };

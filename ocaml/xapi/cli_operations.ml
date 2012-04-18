@@ -2389,7 +2389,15 @@ let vm_migrate printer rpc session_id params =
 	let params = List.map (fun (k, v) -> if (k = "host-uuid") || (k = "host-name") then ("host", v) else (k, v)) params in
 	if not (List.mem_assoc "host" params) then failwith "No destination host specified";
 	let host = (get_host_by_name_or_id rpc session_id (List.assoc "host" params)).getref () in
-	let options = List.map_assoc_with_key (string_of_bool +++ bool_of_string) (List.restrict_with_default "false" ["force"; "live"; "encrypt"] params) in
+	(* The assoc_override function returns an assocation-list with the same keys as in the "defaults"
+	   association-list, and the same values except where overridden by the "overrides" association-list. *)
+	let assoc_override defaults overrides = List.make_assoc
+		(fun k -> List.assoc_default k overrides (List.assoc k defaults))
+		(List.map (fun (k, v) -> k) defaults) in
+	let options = List.map_assoc_with_key (string_of_bool +++ bool_of_string)
+		(assoc_override
+			["force", "false"; "live", "false"; "encrypt", "true"] (* keys with default values *)
+			params) in
 	ignore(do_vm_op ~include_control_vms:true printer rpc session_id (fun vm -> Client.VM.pool_migrate rpc session_id (vm.getref ()) host options)
 		params ["host"; "host-uuid"; "host-name"; "live"; "encrypt"])
 

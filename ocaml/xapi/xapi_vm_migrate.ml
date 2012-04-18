@@ -547,7 +547,7 @@ let pool_migrate_nolock  ~__context ~vm ~host ~options =
 			let hostname = Db.Host.get_address ~__context ~self:host in
 
 			(* Open stunnel if 'encrypt' is set. Otherwise, open a cleartext socket. *)
-			let use_https = try bool_of_string (List.assoc "encrypt" options) with _ -> false in
+			let use_https = try bool_of_string (List.assoc "encrypt" options) with _ -> true in
 			let open Xmlrpcclient in
 			let transport : transport =
 				if use_https
