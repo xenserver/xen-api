@@ -81,7 +81,7 @@ def main(argv):
 	qemu_env = os.environ
 	qemu_dm = '/usr/lib/xen/bin/qemu-dm'
 	domid = int(argv[1])
-	qemu_args = ['qemu-dm-%d'%domid] + ['-parallel', 'none'] + argv[2:]
+	qemu_args = ['qemu-dm-%d'%domid] + argv[2:]
 
 	if is_sdk() is True:
 		return fake_dm(domid)
