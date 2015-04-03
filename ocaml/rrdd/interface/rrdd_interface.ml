@@ -36,6 +36,7 @@ external migrate_rrd : ?session_id:string -> remote_address:string ->
 	vm_uuid:string -> host_uuid:string -> unit -> unit = ""
 external send_host_rrd_to_master : unit -> unit = ""
 external backup_rrds : ?save_stats_locally:bool -> unit -> unit = ""
+external archive_vm_rrd : vm_uuid:string -> unit -> unit = ""
 
 external add_host_ds : ds_name:string -> unit = ""
 external forget_host_ds : ds_name:string -> unit = ""

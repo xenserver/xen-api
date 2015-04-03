@@ -351,6 +351,18 @@ let send_host_rrd_to_master _ () =
 		archive_rrd ~save_stats_locally:false ~uuid:localhost_uuid ~rrd ()
 	| None -> ()
 
+(* Called on VM shutdown/suspend to send the VM's RRD to the pool master
+ * for archiving.  The memory copy will also be cleaned.
+ *)
+let archive_vm_rrd _ ~(vm_uuid : string) () : unit =
+	debug "Archiving VM %s RRD to master" vm_uuid;
+	let rrd = Mutex.execute mutex (fun () ->
+		let rrd = (Hashtbl.find vm_rrds vm_uuid).rrd in
+		Hashtbl.remove vm_rrds vm_uuid;
+		rrd
+	) in
+	archive_rrd ~uuid:vm_uuid ~rrd ()
+
 let add_ds ~rrdi ~ds_name =
 	let open Ds in
 	let ds = List.find (fun ds -> ds.ds_name = ds_name) rrdi.dss in

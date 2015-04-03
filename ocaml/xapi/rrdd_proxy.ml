@@ -50,7 +50,7 @@ let fail_req_with (s : Unix.file_descr) msg (http_err : unit -> string list) =
  * the master. The exact logic can be seen under "The logic." below.
  *)
 let get_vm_rrd_forwarder (req : Http.Request.t) (s : Unix.file_descr) _ =
-	debug "put_rrd_forwarder: start";
+	debug "get_vm_rrd_forwarder: start";
 	let query = req.Http.Request.query in
 	req.Http.Request.close <- true;
 	let vm_uuid = List.assoc "uuid" query in
@@ -210,6 +210,10 @@ let migrate_rrd ~__context ?remote_address ?session_id ~vm_uuid ~host_uuid () =
 	log_and_ignore_exn (
 		Rrdd.migrate_rrd ~remote_address ?session_id ~vm_uuid ~host_uuid
 	)
+
+(* Send archive command to RRDD in the same host *)
+let archive_vm_rrd ~__context ~(vm_uuid : string) : unit =
+	log_and_ignore_exn (Rrdd.archive_vm_rrd ~vm_uuid)
 
 module Deprecated = struct
 	let get_timescale ~__context =
