@@ -29,8 +29,8 @@ let http_fwd_path = xmlrpc_path  ^ ".forwarded"
 
 external has_vm_rrd : vm_uuid:string -> bool = ""
 
-external push_rrd : vm_uuid:string -> domid:int -> is_on_localhost:bool ->
-	unit -> unit = ""
+external push_rrd_local : vm_uuid:string -> domid:int -> unit -> unit = ""
+external push_rrd_remote : vm_uuid:string -> domid:int -> address:string -> unit -> unit = ""
 external remove_rrd : uuid:string -> unit -> unit = ""
 external migrate_rrd : ?session_id:string -> remote_address:string ->
 	vm_uuid:string -> host_uuid:string -> unit -> unit = ""

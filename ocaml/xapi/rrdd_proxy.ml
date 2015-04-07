@@ -197,10 +197,16 @@ let is_vm_on_localhost ~__context ~(vm_uuid : string) : bool =
 	let vm_host = Db.VM.get_resident_on ~__context ~self:vm in
 	localhost = vm_host
 
-let push_rrd ~__context ~(vm_uuid : string) : unit =
-	let is_on_localhost = is_vm_on_localhost ~__context ~vm_uuid in
+let push_rrd ~__context ~(vm_uuid : string) ~host : unit =
+	let lhost = Helpers.get_localhost ~__context in
 	let domid = vm_uuid_to_domid ~__context ~uuid:vm_uuid in
-	log_and_ignore_exn (Rrdd.push_rrd ~vm_uuid ~domid ~is_on_localhost)
+	if lhost = host then
+		log_and_ignore_exn (Rrdd.push_rrd_local ~vm_uuid ~domid)
+	else
+		begin
+			let address = Db.Host.get_address ~__context ~self:host in
+			log_and_ignore_exn (Rrdd.push_rrd_remote ~vm_uuid ~domid ~address)
+		end
 
 let migrate_rrd ~__context ?remote_address ?session_id ~vm_uuid ~host_uuid () =
 	let remote_address = match remote_address with

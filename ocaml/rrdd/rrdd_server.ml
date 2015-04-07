@@ -288,24 +288,31 @@ module Deprecated = struct
 		*)
 end
 
-(* Push function to push the archived RRD to the appropriate host
- * (which might be us, in which case, pop it into the hashtbl. *)
-let push_rrd _ ~(vm_uuid : string) ~(domid : int) ~(is_on_localhost : bool) ()
-		: unit =
+(* Gets the VM rrds *)
+let get_rrd ~vm_uuid =
 	try
 		let path = Xapi_globs.xapi_rrd_location ^ "/" ^ vm_uuid in
-		let rrd = rrd_of_gzip path in
-		debug "Pushing RRD for VM uuid=%s" vm_uuid;
-		if is_on_localhost then
-			Mutex.execute mutex (fun _ ->
-				Hashtbl.replace vm_rrds vm_uuid {rrd; dss=[]; domid}
-			)
-		else
-			(* Host might be OpaqueRef:null, in which case we'll fail silently *)
-			let address = Pool_role_shared.get_master_address () in
-			send_rrd ~address ~to_archive:false ~uuid:vm_uuid
-				~rrd:(Rrd.copy_rrd rrd) ()
-	with _ -> ()
+		rrd_of_gzip path
+	with _ -> failwith (Printf.sprintf "Rrd could not be found for VM %s" vm_uuid)
+
+(* Push function to push the archived RRD to the local host 
+ * in which case, pop it into the hashtbl. *)
+let push_rrd_local _ ~(vm_uuid : string) ~(domid : int) () =
+	try
+		let rrd = get_rrd ~vm_uuid in
+		debug "Pushing RRD for VM uuid=%s locally" vm_uuid;
+		Mutex.execute mutex (fun _ ->
+			Hashtbl.replace vm_rrds vm_uuid {rrd; dss=[]; domid}
+		)
+	with _ -> debug "Couldn't push rrds locally"; ()
+
+(* Push function to push the archived RRD to a remote host *)
+let push_rrd_remote _ ~(vm_uuid : string) ~(domid : int) ~(address : string) () =
+	try
+		let rrd = get_rrd ~vm_uuid in
+		debug "Pushing RRD for VM uuid=%s remotely" vm_uuid;
+		send_rrd ~address ~to_archive:false ~uuid:vm_uuid ~rrd:(Rrd.copy_rrd rrd) ()
+	with _ -> debug "Couldn't push rrds remotely"; ()
 
 (** Remove an RRD from the local filesystem, if it exists. *)
 let remove_rrd _ ~(uuid : string) () : unit =
