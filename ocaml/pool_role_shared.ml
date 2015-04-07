@@ -53,6 +53,12 @@ let get_role () =
 			r
 	)
 
+let update_role () =
+	Mutex.execute role_m (fun _ ->
+		let r = read_pool_role () in
+		role := Some r;
+	)
+
 let is_master () = get_role () = Master
 
 let is_slave () = match get_role () with

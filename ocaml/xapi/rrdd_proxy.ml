@@ -211,6 +211,9 @@ let migrate_rrd ~__context ?remote_address ?session_id ~vm_uuid ~host_uuid () =
 		Rrdd.migrate_rrd ~remote_address ?session_id ~vm_uuid ~host_uuid
 	)
 
+let update_role () =
+	Rrdd.update_role ()
+
 module Deprecated = struct
 	let get_timescale ~__context =
 		let host = Helpers.get_localhost ~__context in

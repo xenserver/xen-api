@@ -351,6 +351,9 @@ let send_host_rrd_to_master _ () =
 		archive_rrd ~save_stats_locally:false ~uuid:localhost_uuid ~rrd ()
 	| None -> ()
 
+let update_role _ () =
+	Pool_role_shared.update_role ()
+
 let add_ds ~rrdi ~ds_name =
 	let open Ds in
 	let ds = List.find (fun ds -> ds.ds_name = ds_name) rrdi.dss in
