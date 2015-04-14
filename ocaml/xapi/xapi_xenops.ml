@@ -976,6 +976,7 @@ let update_vm ~__context id =
 							if power_state = `Suspended || power_state = `Halted then begin
 								Xapi_network.detach_for_vm ~__context ~host:localhost ~vm:self;
 								Storage_access.reset ~__context ~vm:self;
+								Rrdd_proxy.archive_vm_rrd ~__context ~vm_uuid:id
 							end;
 							if power_state = `Halted
 							then Xenopsd_metadata.delete ~__context id;
