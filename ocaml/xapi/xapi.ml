@@ -820,6 +820,7 @@ let server_init() =
     "Reading config file", [], (fun () -> Xapi_config.read_config !Xapi_globs.config_file);
     "Reading external global variables definition", [ Startup.NoExnRaising ], Xapi_globs.read_external_config;
     "XAPI SERVER STARTING", [], print_server_starting_message;
+    "Killing stray sparse_dd processes", [], Sparse_dd_wrapper.killall;
     "Parsing inventory file", [], Xapi_inventory.read_inventory;
     "Setting stunnel timeout", [], set_stunnel_timeout;
     "Initialising local database", [], init_local_database;
