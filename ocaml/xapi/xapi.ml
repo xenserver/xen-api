@@ -820,7 +820,6 @@ let server_init() =
     "Reading config file", [], (fun () -> Xapi_config.read_config !Xapi_globs.config_file);
     "Reading external global variables definition", [ Startup.NoExnRaising ], Xapi_globs.read_external_config;
     "XAPI SERVER STARTING", [], print_server_starting_message;
-    "Killing stray sparse_dd processes", [], Sparse_dd_wrapper.killall;
     "Parsing inventory file", [], Xapi_inventory.read_inventory;
     "Setting stunnel timeout", [], set_stunnel_timeout;
     "Initialising local database", [], init_local_database;
@@ -835,6 +834,7 @@ let server_init() =
 	"Starting SM internal event service", [], Storage_task.Updates.Scheduler.start;
 	"Starting SM service", [], Storage_access.start;
 	"Starting SM xapi event service", [], Storage_access.events_from_sm;
+    "Killing stray sparse_dd processes", [], Sparse_dd_wrapper.killall;
     "Registering http handlers", [], (fun () -> List.iter Xapi_http.add_handler common_http_handlers);
     "Registering master-only http handlers", [ Startup.OnlyMaster ], (fun () -> List.iter Xapi_http.add_handler master_only_http_handlers);
     "Listening unix socket", [], listen_unix_socket;
@@ -982,7 +982,7 @@ let server_init() =
       "wait management interface to come up", [ Startup.NoExnRaising ], wait_management_interface;
       "considering sending a master transition alert", [ Startup.NoExnRaising; Startup.OnlyMaster ], 
           Xapi_pool_transition.consider_sending_alert __context;
-
+      "Cancelling in-progress storage migrations", [], (fun () -> Storage_migrate.killall ~dbg:"xapi init");
       (* Start the external authentification plugin *)
       "Calling extauth_hook_script_before_xapi_initialize", [ Startup.NoExnRaising ],
           (fun () -> call_extauth_hook_script_before_xapi_initialize ~__context);
