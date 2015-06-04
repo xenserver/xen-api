@@ -36,9 +36,19 @@ let update_mh_info interface =
 	let (_: string*string) = Forkhelpers.execute_command_get_output update_mh_info_script [ interface ] in
 	()
 
-let restart_stunnel () =
+let stunnel_m = Mutex.create ()
+
+let restart_stunnel ~__context =
+	let xapissl_args = [ "restart" ] @ 
+		if Helpers.rolling_upgrade_in_progress ~__context
+		then [ "back_compat_6_5" ]
+		else []
+	in
 	let (_ : Thread.t) = Thread.create (fun () ->
-		Forkhelpers.execute_command_get_output "/sbin/service" [ "xapissl"; "restart" ]) () in
+		Mutex.execute management_m (fun () ->
+			Forkhelpers.execute_command_get_output "/sbin/service" ( "xapissl" :: xapissl_args )
+		)
+	) () in
 	()
 
 let stop () =
@@ -74,7 +84,7 @@ let start ~__context ?addr () =
 	management_interface_server := socket :: !management_interface_server;
 
 	debug "Restarting stunnel";
-	restart_stunnel ();
+	restart_stunnel ~__context;
 	if Pool_role.is_master () && !listening_all then begin
 		(* NB if we synchronously bring up the management interface on a master with a blank
 		   database this can fail... this is ok because the database will be synchronised later *)
