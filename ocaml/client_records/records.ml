@@ -1136,6 +1136,7 @@ let host_record rpc session_id host =
 				~get_set:(fun () -> (x ()).API.host_tags)
 				~add_to_set:(fun tag -> Client.Host.add_tags rpc session_id host tag)
 				~remove_from_set:(fun tag -> Client.Host.remove_tags rpc session_id host tag) ();
+			make_field ~name:"ssl-legacy" ~get:(fun () -> string_of_bool (x ()).API.host_ssl_legacy) ();
 		]}
 
 let vdi_record rpc session_id vdi =

@@ -608,6 +608,7 @@ let create ~__context ~uuid ~name_label ~name_description ~hostname ~address ~ex
 	~power_on_mode:""
 	~power_on_config:[]
 	~local_cache_sr
+	~ssl_legacy:true
   ;
   (* If the host we're creating is us, make sure its set to live *)
   Db.Host_metrics.set_last_updated ~__context ~self:metrics ~value:(Date.of_float (Unix.gettimeofday ()));
@@ -861,6 +862,10 @@ let set_hostname_live ~__context ~host ~hostname =
   Debug.invalidate_hostname_cache ();
   Db.Host.set_hostname ~__context ~self:host ~value:hostname
   )
+
+let set_ssl_legacy ~__context ~host ~enabled =
+	info "Xapi_host.set_ssl_legacy is about to set the Db state to %b" enabled;
+	Db.Host.set_ssl_legacy ~__context ~self:host ~value:enabled
 
 let is_in_emergency_mode ~__context =
   !Xapi_globs.slave_emergency_mode

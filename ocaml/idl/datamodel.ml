@@ -18,7 +18,7 @@ open Datamodel_types
 (* IMPORTANT: Please bump schema vsn if you change/add/remove a _field_.
               You do not have to bump vsn if you change/add/remove a message *)
 let schema_major_vsn = 5
-let schema_minor_vsn = 66
+let schema_minor_vsn = 67
 
 (* Historical schema versions just in case this is useful later *)
 let rio_schema_major_vsn = 5
@@ -41,6 +41,9 @@ let cowley_release_schema_minor_vsn = 61
 
 let boston_release_schema_major_vsn = 5
 let boston_release_schema_minor_vsn = 63
+
+let cream_tls_1_2_release_schema_major_vsn = 5
+let cream_tls_1_2_release_schema_major_vsn = 67
 
 (* the schema vsn of the last release: used to determine whether we can upgrade or not.. *)
 let last_release_schema_major_vsn = boston_release_schema_major_vsn
@@ -3958,7 +3961,18 @@ let host_set_power_on_mode = call
           ]
   ~allowed_roles:_R_POOL_OP
   ()
-  
+
+let host_set_ssl_legacy = call
+	~name:"set_ssl_legacy"
+	~lifecycle:[Prototyped, rel_cream_tls12, ""]
+	~doc:"Enable/disable SSLv3 for interoperability with older versions of XenServer"
+	~params:[
+		Ref _host, "host", "The host";
+		Bool, "enabled", "True to allow SSLv3 and ciphersuites as used in old XenServer versions";
+	]
+	~allowed_roles:_R_POOL_OP
+	()
+
 let host_set_cpu_features = call ~flags:[`Session]
   ~name:"set_cpu_features"
   ~in_product_since:rel_midnight_ride
@@ -4167,6 +4181,7 @@ let host =
 		 host_sync_tunnels;
 		 host_sync_pif_currently_attached;
 		 host_migrate_receive;
+		 host_set_ssl_legacy;
 		 ]
       ~contents:
         ([ uid _host;
@@ -4213,6 +4228,7 @@ let host =
 		"chipset_info" "Information about chipset features";
 	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_boston, ""] ~ty:(Set (Ref _pci)) "PCIs" "List of PCI devices in the host";
 	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_boston, ""] ~ty:(Set (Ref _pgpu)) "PGPUs" "List of physical GPUs in the host";
+	field ~qualifier:DynamicRO ~lifecycle:[Prototyped, rel_cream_tls12, ""] ~ty:Bool ~default_value:(Some (VBool true)) "ssl_legacy" "Allow SSLv3 protocol and ciphersuites as used by older XenServers";
  ])
 	()
 
