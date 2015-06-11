@@ -52,6 +52,8 @@ let rel_clearwater_whetstone = "clearwater-whetstone"
 let rel_creedence = "creedence"
 let rel_cream = "cream"
 let rel_indigo = "indigo"
+let rel_pool_health_check = "pool-health-check"
+let rel_cream_tls12 = "cream_tls12"
 
 let release_order =
 	[ rel_rio
@@ -72,6 +74,8 @@ let release_order =
 	; rel_creedence
 	; rel_cream
 	; rel_indigo
+	; rel_pool_health_check
+	; rel_cream_tls12
 	]
 
 exception Unknown_release of string
