@@ -49,7 +49,8 @@ let rel_vgpu_tech_preview = "vgpu-tech-preview"
 let rel_vgpu_productisation = "vgpu-productisation"
 let rel_clearwater_felton = "clearwater-felton"
 let rel_clearwater_whetstone = "clearwater-whetstone"
-							  
+let rel_cream_tls12 = "cream_tls12"
+
 let release_order =
 	[ rel_rio
 	; rel_miami
@@ -66,6 +67,7 @@ let release_order =
 	; rel_vgpu_productisation
 	; rel_clearwater_felton
 	; rel_clearwater_whetstone
+	; rel_cream_tls12
 	]
 
 exception Unknown_release of string
