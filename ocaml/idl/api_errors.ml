@@ -308,6 +308,7 @@ let patch_precheck_failed_wrong_server_version = "PATCH_PRECHECK_FAILED_WRONG_SE
 let patch_precheck_failed_wrong_server_build = "PATCH_PRECHECK_FAILED_WRONG_SERVER_BUILD"
 let patch_precheck_failed_vm_running = "PATCH_PRECHECK_FAILED_VM_RUNNING"
 let patch_apply_failed = "PATCH_APPLY_FAILED"
+let patch_apply_failed_backup_files_exist = "PATCH_APPLY_FAILED_BACKUP_FILES_EXIST"
 let cannot_find_oem_backup_partition = "CANNOT_FIND_OEM_BACKUP_PARTITION"
 let only_allowed_on_oem_edition = "ONLY_ALLOWED_ON_OEM_EDITION"
 let not_allowed_on_oem_edition = "NOT_ALLOWED_ON_OEM_EDITION"
