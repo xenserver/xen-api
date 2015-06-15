@@ -38,20 +38,27 @@ let update_mh_info interface =
 
 let stunnel_m = Mutex.create ()
 
-let restart_stunnel ~__context =
-	let xapissl_args = [ "restart" ] @ 
-		if Helpers.rolling_upgrade_in_progress ~__context
+let restart_stunnel_nomutex ~__context =
+	let back_compat ~__context =
+		let localhost = Helpers.get_localhost ~__context in
+		if Db.Host.get_ssl_legacy ~__context ~self:localhost
 		then [ "back_compat_6_5" ]
-(*		else [] *)
-(*		TODO use line above when trunk no longer needs back-compat mode *)
-		else [ "back_compat_6_5" ]
+		else []
 	in
+	let xapissl_args = [ "restart" ] @ (back_compat ~__context) in
 	let (_ : Thread.t) = Thread.create (fun () ->
 		Mutex.execute management_m (fun () ->
 			Forkhelpers.execute_command_get_output "/sbin/service" ( "xapissl" :: xapissl_args )
 		)
 	) () in
 	()
+
+let restart_stunnel ~__context =
+	Mutex.execute stunnel_m (fun () ->
+		restart_stunnel_nomutex ~__context
+	)
+
+let reconfigure_stunnel = restart_stunnel
 
 let stop () =
 	debug "Shutting down the old management interface (if any)";
