@@ -783,13 +783,13 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-set-ssl-legacy",
+   "host-enable-display",
     {
-      reqd=["enabled"];
+      reqd=["uuid"];
       optn=[];
-      help="Enable/disable SSLv3 backward-compatibility mode for communication with older versions of XenServer and of XenAPI client software.";
-      implementation=No_fd Cli_operations.host_set_ssl_legacy;
-      flags=[Host_selectors]
+      help="Enable display for the host";
+      implementation=No_fd Cli_operations.host_enable_display;
+      flags=[];
     };
 
    "patch-upload",
