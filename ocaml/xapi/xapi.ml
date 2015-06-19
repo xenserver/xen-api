@@ -708,6 +708,11 @@ let set_stunnel_timeout () =
   with _ ->
     debug "Using default stunnel timeout (usually 43200)"
 
+let set_stunnel_legacy ~__context () =
+  let localhost = Helpers.get_localhost ~__context in
+  let legacy = Db.Host.get_ssl_legacy ~__context ~self:localhost in
+  Stunnel.set_legacy_protocol_and_ciphersuites_allowed legacy
+
 let server_init() =
   let listen_unix_socket () =
     (* Always listen on the Unix domain socket first *)
@@ -852,6 +857,7 @@ let server_init() =
      running etc.) -- see CA-11087 *)
     "starting up database engine", [ Startup.OnlyMaster ], start_database_engine;
 	"hi-level database upgrade", [ Startup.OnlyMaster ], Xapi_db_upgrade.hi_level_db_upgrade_rules ~__context;
+    "Setting config for outgoing stunnels", [], set_stunnel_legacy ~__context; (* Requires database access *)
     "bringing up management interface", [], bring_up_management_if ~__context;
     "Starting periodic scheduler", [Startup.OnThread], Xapi_periodic_scheduler.loop;
     "Remote requests", [Startup.OnThread], Remote_requests.handle_requests;
