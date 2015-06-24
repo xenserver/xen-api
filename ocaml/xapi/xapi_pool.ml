@@ -1706,3 +1706,15 @@ let disable_local_storage_caching ~__context ~self =
 	if List.length failed_hosts > 0 then
 		raise (Api_errors.Server_error (Api_errors.hosts_failed_to_disable_caching, List.map Ref.string_of failed_hosts))
 	else ()
+
+let disable_ssl_legacy ~__context ~self =
+	let f ~rpc ~session_id ~host =
+		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:false
+	in
+	call_fn_on_hosts ~__context f
+
+let enable_ssl_legacy ~__context ~self =
+	let f ~rpc ~session_id ~host =
+		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:true
+	in
+	call_fn_on_hosts ~__context f
