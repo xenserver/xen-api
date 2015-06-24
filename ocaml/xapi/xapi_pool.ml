@@ -1738,3 +1738,16 @@ let apply_edition ~__context ~self ~edition =
 				Client.Host.apply_edition ~rpc ~session_id ~host ~edition ~force:false))
 	in
 	Xapi_pool_license.apply_edition_with_rollback ~__context ~hosts ~edition ~apply_fn
+
+
+let disable_ssl_legacy ~__context ~self =
+	let f ~rpc ~session_id ~host =
+		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:false
+	in
+	call_fn_on_hosts ~__context f
+
+let enable_ssl_legacy ~__context ~self =
+	let f ~rpc ~session_id ~host =
+		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:true
+	in
+	call_fn_on_hosts ~__context f
