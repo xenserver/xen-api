@@ -195,3 +195,7 @@ val disable_local_storage_caching : __context:Context.t -> self:API.ref_pool -> 
 
 val get_license_state : __context:Context.t -> self:API.ref_pool -> (string * string) list
 val apply_edition : __context:Context.t -> self:API.ref_pool -> edition:string -> unit
+
+
+val disable_ssl_legacy : __context:Context.t -> self:API.ref_pool -> unit
+val enable_ssl_legacy : __context:Context.t -> self:API.ref_pool -> unit
