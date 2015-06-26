@@ -1332,7 +1332,7 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 			with_vm_operation ~__context ~self:vm ~doc:"VM.hard_shutdown" ~op:`hard_shutdown
 				(fun () ->
 				  List.iter (fun (task,op) ->
-				    if op = `clean_shutdown then
+				    if List.mem op [ `clean_shutdown; `clean_reboot; `hard_reboot ] then
 				      Local.Task.cancel ~__context ~task:(Ref.of_string task)) (Db.VM.get_current_operations ~__context ~self:vm);
 
 					(* If VM is actually suspended and we ask to hard_shutdown, we need to
@@ -1379,7 +1379,7 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 			with_vm_operation ~__context ~self:vm ~doc:"VM.hard_reboot" ~op:`hard_reboot
 				(fun () ->
 				  List.iter (fun (task,op) ->
-				    if op = `clean_reboot then
+				    if List.mem op [ `clean_shutdown; `clean_reboot ] then
 				      Local.Task.cancel ~__context ~task:(Ref.of_string task)) (Db.VM.get_current_operations ~__context ~self:vm);
 
 
