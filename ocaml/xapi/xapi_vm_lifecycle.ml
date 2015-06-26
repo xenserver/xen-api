@@ -450,3 +450,13 @@ let cancel_tasks ~__context ~self ~all_tasks_in_db ~task_ids =
 	let ops = Db.VM.get_current_operations ~__context ~self in
 	let set = (fun value -> Db.VM.set_current_operations ~__context ~self ~value) in
 	Helpers.cancel_tasks ~__context ~ops ~all_tasks_in_db ~task_ids ~set
+
+
+type power_state = [ `Halted | `Paused | `Running | `Suspended ]
+let assert_power_state_is ~__context ~self ~(expected:power_state) =
+	let actual = Db.VM.get_power_state ~__context ~self in
+	if actual <> expected
+	then raise (Api_errors.Server_error(Api_errors.vm_bad_power_state, [
+								Ref.string_of self;
+								Record_util.power_to_string expected;
+								Record_util.power_to_string actual ]))
