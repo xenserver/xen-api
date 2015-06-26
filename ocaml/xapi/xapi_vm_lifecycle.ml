@@ -479,3 +479,13 @@ let cancel_tasks ~__context ~self ~all_tasks_in_db ~task_ids =
 let get_operation_error ~__context ~self ~op=
 	let all, gm, clone_suspended_vm_enabled, vdis_reset_and_caching = get_info ~__context ~self in
 	check_operation_error __context all gm self clone_suspended_vm_enabled vdis_reset_and_caching op
+
+
+type power_state = [ `Halted | `Paused | `Running | `Suspended ]
+let assert_power_state_is ~__context ~self ~(expected:power_state) =
+	let actual = Db.VM.get_power_state ~__context ~self in
+	if actual <> expected
+	then raise (Api_errors.Server_error(Api_errors.vm_bad_power_state, [
+								Ref.string_of self;
+								Record_util.power_to_string expected;
+								Record_util.power_to_string actual ]))
