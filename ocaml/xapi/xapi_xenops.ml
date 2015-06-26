@@ -1842,7 +1842,7 @@ let pause ~__context ~self =
 			let dbg = Context.string_of_task __context in
 			Client.VM.pause dbg id |> sync_with_task __context;
 			Events_from_xenopsd.wait dbg id ();
-			assert (Db.VM.get_power_state ~__context ~self = `Paused)
+			Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:`Paused
 		)
 
 let unpause ~__context ~self =
@@ -1853,7 +1853,7 @@ let unpause ~__context ~self =
 			let dbg = Context.string_of_task __context in
 			Client.VM.unpause dbg id |> sync_with_task __context;
 			Events_from_xenopsd.wait dbg id ();
-			assert (Db.VM.get_power_state ~__context ~self = `Running)
+			Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:`Running
 		)
 
 let request_rdp ~__context ~self enabled =
@@ -1990,7 +1990,7 @@ let start ~__context ~self paused =
 				raise e
 		);
 	(* XXX: if the guest crashed or shutdown immediately then it may be offline now *)
-	assert (Db.VM.get_power_state ~__context ~self = (if paused then `Paused else `Running))
+	Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:(if paused then `Paused else `Running)
 
 let start ~__context ~self paused =
 	transform_xenops_exn ~__context
@@ -2017,7 +2017,7 @@ let reboot ~__context ~self timeout =
 			info "xenops: VM.reboot %s" id;
 			Client.VM.reboot dbg id timeout |> sync_with_task __context;
 			Events_from_xenopsd.wait dbg id ();
-			assert (Db.VM.get_power_state ~__context ~self = `Running)
+			Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:`Running
 		)
 
 let shutdown ~__context ~self timeout =
@@ -2030,7 +2030,7 @@ let shutdown ~__context ~self timeout =
 			info "xenops: VM.shutdown %s" id;
 			Client.VM.shutdown dbg id timeout |> sync_with_task __context;
 			Events_from_xenopsd.wait dbg id ();
-			assert (Db.VM.get_power_state ~__context ~self = `Halted);
+			Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:`Halted;
 			(* force_state_reset called from the xenopsd event loop above *)
 			assert (Db.VM.get_resident_on ~__context ~self = Ref.null);
 			List.iter
@@ -2066,7 +2066,7 @@ let suspend ~__context ~self =
 						info "xenops: VM.suspend %s to %s" id (disk |> rpc_of_disk |> Jsonrpc.to_string);
 						Client.VM.suspend dbg id disk |> sync_with_task __context;
 						Events_from_xenopsd.wait dbg id ();
-						assert (Db.VM.get_power_state ~__context ~self = `Suspended);
+						Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:`Suspended;
 						assert (Db.VM.get_resident_on ~__context ~self = Ref.null);
 					with e ->
 						error "Caught exception suspending VM: %s" (string_of_exn e);
@@ -2120,7 +2120,7 @@ let resume ~__context ~self ~start_paused ~force =
 				(fun rpc session_id ->
 					XenAPI.VDI.destroy rpc session_id vdi
 				);
-			assert (Db.VM.get_power_state ~__context ~self = if start_paused then `Paused else `Running);
+			Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:(if start_paused then `Paused else `Running)
 		)
 
 let s3suspend ~__context ~self =
