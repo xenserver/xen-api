@@ -642,9 +642,7 @@ let set_HVM_shadow_multiplier ~__context ~self ~value =
 
 (** Sets the HVM shadow multiplier for a {b Running} VM. Runs on the slave. *)
 let set_shadow_multiplier_live ~__context ~self ~multiplier =
-	let power_state = Db.VM.get_power_state ~__context ~self in
-	if power_state <> `Running
-	then raise (Api_errors.Server_error(Api_errors.vm_bad_power_state, [Ref.string_of self; "running"; (Record_util.power_to_string power_state)]));
+	Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:`Running;
 
 	validate_HVM_shadow_multiplier multiplier;
 
@@ -791,10 +789,7 @@ let recover ~__context ~self ~session_to ~force =
 	ignore (Xapi_dr.recover_vms ~__context ~vms:[self] ~session_to ~force)
 
 let set_suspend_VDI ~__context ~self ~value =
-	let vm_state =  Db.VM.get_power_state ~__context ~self in
-	if vm_state <> `Suspended then
-		raise (Api_errors.Server_error(Api_errors.vm_bad_power_state,
-			[Ref.string_of self; "suspended"; Record_util.power_to_string vm_state]));
+	Xapi_vm_lifecycle.assert_power_state_is ~__context ~self ~expected:`Suspended;
 	let src_vdi = Db.VM.get_suspend_VDI ~__context ~self in
 	let dst_vdi = value in
 	if src_vdi <> dst_vdi then
