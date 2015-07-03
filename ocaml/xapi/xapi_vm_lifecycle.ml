@@ -481,13 +481,12 @@ let get_operation_error ~__context ~self ~op=
 	check_operation_error __context all gm self clone_suspended_vm_enabled vdis_reset_and_caching op
 
 
-type power_state = [ `Halted | `Paused | `Running | `Suspended ]
-let assert_power_state_in ~__context ~self ~(allowed:power_state list) =
+let assert_power_state_in ~__context ~self ~allowed =
 	let actual = Db.VM.get_power_state ~__context ~self in
 	if not (List.mem actual allowed)
 	then raise (Api_errors.Server_error(Api_errors.vm_bad_power_state, [
-								Ref.string_of self;
-                String.concat ";" (List.map Record_util.power_to_string allowed);
-								Record_util.power_to_string actual ]))
+		Ref.string_of self;
+		String.concat ";" (List.map Record_util.power_to_string allowed);
+		Record_util.power_to_string actual ]))
 
 let assert_power_state_is ~expected = assert_power_state_in ~allowed:[expected]
