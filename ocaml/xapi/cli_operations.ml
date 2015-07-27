@@ -3070,6 +3070,8 @@ let vm_import fd printer rpc session_id params =
 		let full_restore = get_bool_param params "preserve" in
 		let vm_metadata_only = get_bool_param params "metadata" in
 		let force = get_bool_param params "force" in
+		let vdi_map = read_map_params "vdi" params in
+
 		(* Special-case where the user accidentally sets filename=<path to ova.xml file> *)
 		let filename =
 			if String.endswith "ova.xml" (String.lowercase filename)
@@ -3229,13 +3231,14 @@ let vm_import fd printer rpc session_id params =
 			(* possibly a Rio import *)
 					let make_command task_id =
 						let prefix = uri_of_someone rpc session_id Master in
-						let uri = Printf.sprintf "%s%s?session_id=%s&task_id=%s&restore=%s&force=%s%s"
+						let uri = Printf.sprintf "%s%s?session_id=%s&task_id=%s&restore=%s&force=%s%s%s"
 							prefix
 							(if vm_metadata_only then Constants.import_metadata_uri else Constants.import_uri)
 							(Ref.string_of session_id) (Ref.string_of task_id)
 							(if full_restore then "true" else "false")
 							(if force then "true" else "false")
-							(if sr <> Ref.null then "&sr_id=" ^ (Ref.string_of sr) else "") in
+							(if sr <> Ref.null then "&sr_id=" ^ (Ref.string_of sr) else "")
+							(String.concat "" (List.map (fun (a, b) -> "&vdi:" ^ a ^ "=" ^ b) vdi_map)) in
 						debug "requesting HttpPut('%s','%s')" filename uri;
 						HttpPut (filename, uri) in
 					let importtask =
