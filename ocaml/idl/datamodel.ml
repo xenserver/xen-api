@@ -3965,7 +3965,7 @@ let host_set_power_on_mode = call
 let host_set_ssl_legacy = call
 	~name:"set_ssl_legacy"
 	~lifecycle:[Prototyped, rel_cream_tls12, ""]
-	~doc:"Enable/disable SSLv3 for interoperability with older versions of XenServer"
+	~doc:"Enable/disable SSLv3 for interoperability with older versions of XenServer. When this is set to a different value, the host immediately restarts its SSL/TLS listening service; typically this takes less than a second but existing connections to it will be broken. XenAPI login sessions will remain valid."
 	~params:[
 		Ref _host, "self", "The host";
 		Bool, "value", "True to allow SSLv3 and ciphersuites as used in old XenServer versions";
@@ -4228,7 +4228,7 @@ let host =
 		"chipset_info" "Information about chipset features";
 	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_boston, ""] ~ty:(Set (Ref _pci)) "PCIs" "List of PCI devices in the host";
 	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_boston, ""] ~ty:(Set (Ref _pgpu)) "PGPUs" "List of physical GPUs in the host";
-	field ~qualifier:DynamicRO ~lifecycle:[Prototyped, rel_cream_tls12, ""] ~ty:Bool ~default_value:(Some (VBool true)) "ssl_legacy" "Allow SSLv3 protocol and ciphersuites as used by older XenServers";
+	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_dundee, ""] ~ty:Bool ~default_value:(Some (VBool true)) "ssl_legacy" "Allow SSLv3 protocol and ciphersuites as used by older XenServers. This controls both incoming and outgoing connections. When this is set to a different value, the host immediately restarts its SSL/TLS listening service; typically this takes less than a second but existing connections to it will be broken. XenAPI login sessions will remain valid.";
  ])
 	()
 
@@ -6164,10 +6164,10 @@ let pool_enable_ssl_legacy = call
 	~name:"enable_ssl_legacy"
 	~in_oss_since:None
 	~lifecycle:[
-		Prototyped, rel_dundee, "Sets ssl_legacy true on each host.";
+		Published, rel_dundee, "";
 	]
 	~params:[Ref _pool, "self", "(ignored)";]
-	~doc:"Sets ssl_legacy true on each host: see Host.ssl_legacy"
+	~doc:"Sets ssl_legacy true on each host, pool-master last. See Host.ssl_legacy and Host.set_ssl_legacy."
 	~allowed_roles:_R_POOL_OP
 	()
 
@@ -6175,10 +6175,10 @@ let pool_disable_ssl_legacy = call
 	~name:"disable_ssl_legacy"
 	~in_oss_since:None
 	~lifecycle:[
-		Prototyped, rel_dundee, "Sets ssl_legacy false on each host.";
+		Published, rel_dundee, "";
 	]
 	~params:[Ref _pool, "self", "(ignored)";]
-	~doc:"Sets ssl_legacy true on each host: see Host.ssl_legacy"
+	~doc:"Sets ssl_legacy true on each host, pool-master last. See Host.ssl_legacy and Host.set_ssl_legacy."
 	~allowed_roles:_R_POOL_OP
 	()
 
