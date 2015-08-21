@@ -118,7 +118,9 @@ val ha_schedule_plan_recomputation : __context:'a -> unit
 
 (** {2 (Fill in Title!)} *)
 
-val call_fn_on_hosts :
+(** Call the function on the slaves first. When those calls have all
+ *  returned, call the function on the master. *)
+val call_fn_on_slaves_then_master :
   __context:Context.t ->
   (rpc:(XMLRPC.xmlrpc -> Xml.xml) ->
    session_id:API.ref_session -> host:[ `host ] Ref.t -> 'a) ->
