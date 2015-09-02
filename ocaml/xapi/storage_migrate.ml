@@ -492,10 +492,10 @@ let stop ~dbg ~id =
 			raise e
 
 let stat ~dbg ~id =
-	let s1 = State.find id State.active_recv in
-	let s2 = State.find id State.active_send in
+	let recv_opt = State.find id State.active_recv in
+	let send_opt = State.find id State.active_send in
 	let open State in
-	let failed = match s2 with
+	let failed = match send_opt with
 		| Some (Send s) ->
 			let failed = 
 				try 
@@ -510,15 +510,15 @@ let stat ~dbg ~id =
 		| _ -> false
 	in
 	let open Mirror in
-	let state = match (s1,s2) with 
+	let state = match (recv_opt,send_opt) with
 		| (Some _, Some _) -> [Sending; Receiving] 
 		| (Some _, None) -> [Receiving]
 		| (None, Some _) -> [Sending]
 		| (None, None) -> raise (Does_not_exist ("mirror",id))
 	in
 	let (sr,vdi) = of_mirror_id id in
-	let src = match (s1,s2) with | (Some (Receive x), _) -> x.Receive_state.remote_vdi | (_,Some (Send x)) -> vdi | _ -> failwith "Invalid" in
-	let dst = match (s1,s2) with | (Some (Receive x), _) -> x.Receive_state.leaf_vdi | (_,Some (Send x)) -> x.Send_state.mirror_vdi | _ -> failwith "Invalid" in
+	let src = match (recv_opt,send_opt) with | (Some (Receive x), _) -> x.Receive_state.remote_vdi | (_,Some (Send x)) -> vdi | _ -> failwith "Invalid" in
+	let dst = match (recv_opt,send_opt) with | (Some (Receive x), _) -> x.Receive_state.leaf_vdi | (_,Some (Send x)) -> x.Send_state.mirror_vdi | _ -> failwith "Invalid" in
 	{ Mirror.source_vdi = src; dest_vdi = dst; state; failed; }
 
 let list ~dbg =
