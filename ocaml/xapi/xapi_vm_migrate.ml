@@ -51,7 +51,7 @@ let with_migrate f =
 	
 
 module XenAPI = Client
-module SMAPI = Storage_interface.Client(struct let rpc = Storage_migrate.rpc ~srcstr:"xapi" ~dststr:"smapiv2" Storage_migrate.local_url end)
+module SMAPI = Storage_interface.Client(struct let rpc call = Storage_migrate.rpc ~srcstr:"xapi" ~dststr:"smapiv2" (Storage_migrate.local_url ()) call end)
 
 module XenopsAPI = Xenops_client.Client
 open Storage_interface
@@ -434,9 +434,9 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
 					let dest_vdi_ref = XenAPI.VDI.get_by_uuid remote_rpc session_id vdi_uuid in
 					location,dest_vdi_ref,"none"
 				else begin
-					let newdp = Printf.sprintf (if do_mirror then "mirror_%s" else "copy_%s") dp in
-					(* DP set up is only essential for MIRROR.start/stop due to their open ended pattern.
-					   It's not necessary for copy which will take care of that itself。*)
+					let newdp = (if do_mirror then (Printf.sprintf "mirror_%s" dp) else (Printf.sprintf "copy_%s" dp)) in
+					(* DP set up is only essential for MIRROR.start/stop due to their open ended pattern.*)
+					(* It's not necessary for copy which will take care of that itself *)
 					if do_mirror then begin
 						(* Though we have no intention of "write", here we use the same mode as the
 						   associated VBD on a mirrored VDIs (i.e. always RW). This avoids problem

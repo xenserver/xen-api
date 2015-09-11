@@ -45,8 +45,9 @@ module State = struct
 
   let m = Mutex.create ()
 
-  let load () = try Unixext.string_of_file !filename |> Jsonrpc.of_string |> pids_of_rpc with _ -> []
-  let save pids = rpc_of_pids pids |> Jsonrpc.to_string |> Unixext.write_string_to_file !filename
+  let load () = try pids_of_rpc (Jsonrpc.of_string (Unixext.string_of_file !filename)) with _ -> []
+
+  let save pids = Unixext.write_string_to_file (Jsonrpc.to_string (rpc_of_pids pids)) !filename
 
   let unsafe_add pid = let pids = load () in save (pid::pids)
   let unsafe_remove pid = let pids = load () in save (List.filter (fun x -> x <> pid) pids)
@@ -175,8 +176,8 @@ let killall () =
 			Pervasiveext.finally 
 				(fun () -> 
 					let exe = Unix.readlink (Printf.sprintf "/proc/%d/exe" pid) in
-					debug "checking pid %d exe=%s globs=%s" pid exe !Xapi_globs.sparse_dd;
-					if Filename.basename exe = Filename.basename !Xapi_globs.sparse_dd
+					debug "checking pid %d exe=%s globs=%s" pid exe sparse_dd_path;
+					if Filename.basename exe = Filename.basename sparse_dd_path
 					then Unix.kill pid Sys.sigkill
 					else ())
 				(fun () ->

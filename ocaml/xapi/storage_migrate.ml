@@ -82,7 +82,7 @@ module State = struct
 	let loaded = ref false
 	let mutex = Mutex.create () 
 
-e
+	type opty = OSend | OReceive | OCopy
 
 	let path ty = match ty with
 		| OSend -> "/var/run/nonpersistent/storage_mirrors_send.json"
@@ -174,7 +174,7 @@ let vdi_info x =
 		| Some (Vdi_info v) -> v
 		| _ -> failwith "Runtime type error: expecting Vdi_info"
 
-module Local = Client(struct let rpc = rpc ~srcstr:"smapiv2" ~dststr:"smapiv2" local_url end)
+module Local = Client(struct let rpc call = rpc ~srcstr:"smapiv2" ~dststr:"smapiv2" (local_url ()) call end)
 
 let tapdisk_of_attach_info attach_info =
 	let path = attach_info.params in
