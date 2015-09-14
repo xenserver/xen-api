@@ -28,6 +28,35 @@ type progress =
 		| Continuing of float
 		| Finished of exn option
 
+type t = {
+  m : Mutex.t;
+  c : Condition.t;
+  pid : Forkhelpers.pidty;
+  finished : bool ref;
+  cancelled : bool ref;
+  exn : exn option ref;
+}
+
+(* Store sparse_dd pids on disk so we can kill them after a xapi restart *)
+module State = struct
+  type pids = int list with rpc
+
+  let filename = ref "/var/run/nonpersistent/xapi/sparse_dd_pids.json"
+
+  let m = Mutex.create ()
+
+  let load () = try pids_of_rpc (Jsonrpc.of_string (Unixext.string_of_file !filename)) with _ -> []
+
+  let save pids = Unixext.write_string_to_file (Jsonrpc.to_string (rpc_of_pids pids)) !filename
+
+  let unsafe_add pid = let pids = load () in save (pid::pids)
+  let unsafe_remove pid = let pids = load () in save (List.filter (fun x -> x <> pid) pids)
+
+  let add pid = Mutex.execute m (fun () -> unsafe_add pid)
+  let remove pid = Mutex.execute m (fun () -> unsafe_remove pid)
+  let list () = Mutex.execute m load
+end
+
 exception Cancelled
 
 (** Use the new external sparse_dd program *)
@@ -49,6 +78,8 @@ let dd_internal progress_cb base prezeroed infile outfile size =
 				debug "%s %s" sparse_dd_path (String.concat " " args);
 				let pid = Forkhelpers.safe_close_and_exec None (Some pipe_write) (Some log_fd) []
 					sparse_dd_path args in
+				let intpid = Forkhelpers.getpid pid in
+				State.add intpid;
 				close pipe_write;
 				progress_cb (Started pid);
 				(* Read Progress: output from the binary *)
@@ -66,7 +97,9 @@ let dd_internal progress_cb base prezeroed infile outfile size =
 							raise e
 						end
 					) () pipe_read;
-				match Forkhelpers.waitpid pid with
+				let r = Forkhelpers.waitpid pid in
+				State.remove intpid;
+				match r with
 				| (_, Unix.WEXITED 0) -> progress_cb (Finished None)
 				| (_, Unix.WEXITED 5) -> error "sparse_dd received NBD error"; failwith "sparse_dd NBD error"
 				| (_, Unix.WEXITED n) -> error "sparse_dd exit: %d" n; failwith "sparse_dd"
@@ -83,7 +116,7 @@ let dd_internal progress_cb base prezeroed infile outfile size =
 	(fun () ->
 		close pipe_read;
 		close pipe_write)
-	
+
 let dd ?(progress_cb=(fun _ -> ())) ?base prezeroed =
 	dd_internal (function | Continuing x -> progress_cb x | _ -> ()) base prezeroed
 
@@ -113,27 +146,42 @@ let start ?(progress_cb=(fun _ -> ())) ?base prezeroed infile outfile size =
 		done);
 	match (!pid,!exn) with
 		| Some pid, None -> 
-			(m,c,pid,finished,cancelled,exn)
+			{m; c; pid; finished; cancelled; exn}
 		| _, Some e ->
 			raise e
 		| _ ->
 			failwith "Unexpected error in start_dd"
-		
-let wait (m,c,pid,finished,cancelled,exn) =
-	Mutex.execute m (fun () ->
-		while (!finished = false) do
-			Condition.wait c m
+
+let wait t =
+	Mutex.execute t.m (fun () ->
+		while (!(t.finished) = false) do
+			Condition.wait t.c t.m
 		done);
-	if !cancelled then raise Cancelled;
-	match !exn with 
+	if !(t.cancelled) then raise Cancelled;
+	match !(t.exn) with 
 		| Some exn -> raise exn
 		| None -> ()
 
-let cancel (m,c,pid,finished,cancelled,exn) =
-	cancelled := true;
-	let pid = Forkhelpers.getpid pid in
+let cancel t =
+	t.cancelled := true;
+	let pid = Forkhelpers.getpid t.pid in
 	try Unix.kill pid Sys.sigkill with _ -> () 
 
-		
-				
-		
+(* This function will kill all sparse_dd pids that have been started by xapi *)
+(* Only to be used on xapi restart *)
+let killall () =
+	let pids = State.list () in
+	List.iter (fun pid ->
+		try
+			Pervasiveext.finally 
+				(fun () -> 
+					let exe = Unix.readlink (Printf.sprintf "/proc/%d/exe" pid) in
+					debug "checking pid %d exe=%s globs=%s" pid exe sparse_dd_path;
+					if Filename.basename exe = Filename.basename sparse_dd_path
+					then Unix.kill pid Sys.sigkill
+					else ())
+				(fun () ->
+					State.remove pid)
+		with _ -> ()
+	) pids
+
