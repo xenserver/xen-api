@@ -17,6 +17,7 @@ open Pervasiveext
 open Client
 open Printf
 open Threadext
+open Fun
 
 module D=Debug.Debugger(struct let name="xapi" end)
 open D
@@ -175,8 +176,8 @@ let killall () =
 			Pervasiveext.finally 
 				(fun () -> 
 					let exe = Unix.readlink (Printf.sprintf "/proc/%d/exe" pid) in
-					debug "checking pid %d exe=%s globs=%s" pid exe !Xapi_globs.sparse_dd;
-					if Filename.basename exe = Filename.basename !Xapi_globs.sparse_dd
+					debug "checking pid %d exe=%s globs=%s" pid exe sparse_dd_path;
+					if Filename.basename exe = Filename.basename sparse_dd_path
 					then Unix.kill pid Sys.sigkill
 					else ())
 				(fun () ->
