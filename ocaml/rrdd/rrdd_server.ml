@@ -111,7 +111,7 @@ module Deprecated = struct
 	 * assume that the RRDs were stored locally and fall back to asking the
 	 * master if we can't find them. *)
 	let load_rrd _ ~(uuid : string) ~master_address ~(is_master : bool)
-		~(timescale : int) () : unit =
+		~(timescale : int) : unit =
 		try
 			let rrd =
 				try
@@ -288,7 +288,7 @@ let get_rrd ~vm_uuid =
 	let path = Xapi_globs.xapi_rrd_location ^ "/" ^ vm_uuid in
 	rrd_of_gzip path
 
-let push_rrd_local _ ~vm_uuid ~domid () : unit =
+let push_rrd_local _ ~vm_uuid ~domid : unit =
 	try
 		let rrd = get_rrd ~vm_uuid in
 		debug "Pushing RRD for VM uuid=%s locally" vm_uuid;
@@ -297,7 +297,7 @@ let push_rrd_local _ ~vm_uuid ~domid () : unit =
 		)
 	with _ -> ()
 
-let push_rrd_remote _ ~vm_uuid ~remote_address () : unit =
+let push_rrd_remote _ ~vm_uuid ~remote_address : unit =
 	try
 		let rrd = get_rrd ~vm_uuid in
 		debug "Pushing RRD for VM uuid=%s remotely" vm_uuid;
@@ -305,7 +305,7 @@ let push_rrd_remote _ ~vm_uuid ~remote_address () : unit =
 	with _ -> ()
 
 (** Remove an RRD from the local filesystem, if it exists. *)
-let remove_rrd _ ~(uuid : string) () : unit =
+let remove_rrd _ ~(uuid : string) : unit =
 	let path = Xapi_globs.xapi_rrd_location ^ "/" ^ uuid in
 	let gz_path = path ^ ".gz" in
 	(try Unix.unlink path with _ -> ());
@@ -318,7 +318,7 @@ let remove_rrd _ ~(uuid : string) () : unit =
  * Remote address is assumed to be valid, since it is set by monitor_master.
  *)
 let migrate_rrd _ ?(session_id : string option) ~(remote_address : string)
-		~(vm_uuid : string) ~(host_uuid : string) () : unit =
+		~(vm_uuid : string) ~(host_uuid : string) : unit =
 	try
 		let rrdi = Mutex.execute mutex (fun () ->
 			let rrdi = Hashtbl.find vm_rrds vm_uuid in
@@ -340,7 +340,7 @@ let migrate_rrd _ ?(session_id : string option) ~(remote_address : string)
 
 (* Called on host shutdown/reboot to send the Host RRD to the master for
  * backup. Note all VMs will have been shutdown by now. *)
-let send_host_rrd_to_master _ ~master_address () =
+let send_host_rrd_to_master _ ~master_address =
 	match !host_rrd with
 	| Some rrdi ->
 		debug "sending host RRD to master";
@@ -419,7 +419,7 @@ let query_vm_ds _ ~(vm_uuid : string) ~(ds_name : string) : float =
 		Rrd.query_named_ds rrdi.rrd ds_name Rrd.CF_Average
 	)
 
-let update_use_min_max _ ~(value : bool) () : unit =
+let update_use_min_max _ ~(value : bool) : unit =
 	debug "Updating use_min_max: New value=%b" value;
 	use_min_max := value
 
@@ -430,7 +430,7 @@ let update_vm_memory_target _ ~(domid : int) ~(target : int64) : unit =
 	Mutex.execute memory_targets_m
 		(fun _ -> Hashtbl.replace memory_targets domid target)
 
-let set_cache_sr _ ~(sr_uuid : string) () : unit =
+let set_cache_sr _ ~(sr_uuid : string) : unit =
 	Mutex.execute cache_sr_lock (fun () -> cache_sr_uuid := Some sr_uuid)
 
 let unset_cache_sr _ () =
@@ -691,7 +691,7 @@ end
 
 module HA = struct
 	let enable_and_update _ ~(statefile_latencies : Rrd.Statefile_latency.t list)
-			~(heartbeat_latency : float) ~(xapi_latency : float) () =
+			~(heartbeat_latency : float) ~(xapi_latency : float) =
 		Mutex.execute Rrdd_ha_stats.m (fun _ ->
 			Rrdd_ha_stats.enabled := true;
 			Rrdd_ha_stats.Statefile_latency.all := statefile_latencies;
