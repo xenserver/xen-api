@@ -31,6 +31,13 @@ let plugin_default = ref false
 let has_vm_rrd _ ~(vm_uuid : string) =
 	Mutex.execute mutex (fun _ -> Hashtbl.mem vm_rrds vm_uuid)
 
+let archive_rrd _ ~vm_uuid ~remote_address : unit =
+	Mutex.execute mutex (fun () ->
+		try
+			let rrd = (Hashtbl.find vm_rrds vm_uuid).rrd in
+			archive_rrd_internal ~remote_address ~uuid:vm_uuid ~rrd ()
+		with Not_found -> ())
+
 let backup_rrds _ ?(remote_address = None) () : unit =
 	debug "backing up rrds %s" (match remote_address with
 		| None -> "locally"
@@ -52,13 +59,13 @@ let backup_rrds _ ?(remote_address = None) () : unit =
 				(fun (uuid, rrd) ->
 					debug "Backup: saving RRD for VM uuid=%s to local disk" uuid;
 					let rrd = Mutex.execute mutex (fun () -> Rrd.copy_rrd rrd) in
-					archive_rrd ~remote_address ~uuid ~rrd ()
+					archive_rrd_internal ~remote_address ~uuid ~rrd ()
 				) vrrds;
 			match !host_rrd with
 			| Some rrdi ->
 				debug "Backup: saving RRD for host to local disk";
 				let rrd = Mutex.execute mutex (fun () -> Rrd.copy_rrd rrdi.rrd) in
-				archive_rrd ~remote_address ~uuid:localhost_uuid ~rrd ()
+				archive_rrd_internal ~remote_address ~uuid:localhost_uuid ~rrd ()
 			| None -> ()
 		end else begin
 			cycles_tried := 1 + !cycles_tried;
