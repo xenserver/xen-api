@@ -638,11 +638,6 @@ let update_vbds doms =
 (*****************************************************)
 (* generic code                                      *)
 (*****************************************************)
-let lock = Mutex.create ()
-
-(** Rebooting VMs - lock out the sending back of the RRDs *)
-let rebooting_vms = ref StringSet.empty
-
 let previous_oldness = ref 0
 let previous_free_words = ref 0
 let previous_live_words = ref 0
@@ -774,8 +769,6 @@ let handle_exn log f default =
 let read_all_dom0_stats xc =
 	let domains = Xenctrl.domain_getinfolist xc 0 in
 	let timestamp = Unix.gettimeofday () in
-	let my_rebooting_vms =
-		StringSet.fold (fun uuid acc -> uuid::acc) !rebooting_vms [] in
 	let open Xenctrl.Domain_info in
 	let uuid_of_domain d =
 		Uuid.to_string (Uuid.uuid_of_int_array (d.handle)) in
@@ -804,17 +797,17 @@ let read_all_dom0_stats xc =
 	] in
 	let fake_stats = Rrdd_fake.get_fake_stats (List.map fst uuid_domids) in
 	let all_stats = Rrdd_fake.combine_stats real_stats fake_stats in
-	all_stats, uuid_domids, pifs, timestamp, my_rebooting_vms, my_paused_domain_uuids
+	all_stats, uuid_domids, pifs, timestamp, my_paused_domain_uuids
 
 let do_monitor xc =
 	Stats.time_this "monitor"
 		(fun _ ->
-			let dom0_stats, uuid_domids, pifs, timestamp, my_rebooting_vms, my_paused_vms =
+			let dom0_stats, uuid_domids, pifs, timestamp, my_paused_vms =
 				read_all_dom0_stats xc in
 			let plugins_stats = Rrdd_server.Plugin.read_stats () in
 			let stats = List.rev_append plugins_stats dom0_stats in
 			Rrdd_stats.print_snapshot ();
-			Rrdd_monitor.update_rrds timestamp stats uuid_domids pifs my_rebooting_vms my_paused_vms
+			Rrdd_monitor.update_rrds timestamp stats uuid_domids pifs my_paused_vms
 		)
 
 let monitor_loop () =
