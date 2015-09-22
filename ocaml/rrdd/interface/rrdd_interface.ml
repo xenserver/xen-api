@@ -75,8 +75,8 @@ module Deprecated = struct
 	external get_full_update_avg_rra_idx : unit -> int = ""
 	external get_full_update_last_rra_idx : unit -> int = ""
 	(* Could change timescale to sum type, e.g. Slow | Fast.*)
-	external load_rrd : uuid:string -> master_address:string -> is_master:bool ->
-		timescale:int -> unit = ""
+	external load_rrd : uuid:string -> timescale:int ->
+		master_address:string option -> unit = ""
 	(* external get_host_rrd : unit -> rrd_info option = "" *)
 	external get_host_stats : unit -> unit = ""
 end
