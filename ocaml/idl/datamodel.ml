@@ -66,6 +66,9 @@ let creedence_release_schema_minor_vsn = 72
 let cream_release_schema_major_vsn = 5
 let cream_release_schema_minor_vsn = 73
 
+let pool_health_check_release_schema_major_vsn = 5
+let pool_health_check_release_schema_minor_vsn = 74
+
 (* the schema vsn of the last release: used to determine whether we can upgrade or not.. *)
 let last_release_schema_major_vsn = creedence_release_schema_major_vsn
 let last_release_schema_minor_vsn = creedence_release_schema_minor_vsn
@@ -6485,7 +6488,7 @@ let pool =
 			; field ~qualifier:DynamicRO ~in_product_since:rel_orlando ~ty:(Map(String, Ref _blob)) ~default_value:(Some (VMap [])) "blobs" "Binary blobs associated with this pool"
 			; field ~writer_roles:_R_VM_OP ~in_product_since:rel_orlando ~default_value:(Some (VSet [])) ~ty:(Set String) "tags" "user-specified tags for categorization purposes"
 			; field ~writer_roles:_R_VM_OP ~in_product_since:rel_orlando ~default_value:(Some (VMap [])) ~ty:(Map(String, String)) "gui_config" "gui-specific configuration for pool"
-                        ; field ~writer_roles:_R_POOL_OP ~in_product_since:rel_dundee ~default_value:(Some (VMap [])) ~ty:(Map(String, String)) "health_check_config" "Configuration for the automatic health check feature"
+                        ; field ~writer_roles:_R_POOL_OP ~in_product_since:rel_pool_health_check ~default_value:(Some (VMap [])) ~ty:(Map(String, String)) "health_check_config" "Configuration for the automatic health check feature"
 			; field ~in_product_since:rel_george ~qualifier:DynamicRO ~ty:String ~default_value:(Some (VString "")) "wlb_url" "Url for the configured workload balancing host"
 			; field ~in_product_since:rel_george ~qualifier:DynamicRO ~ty:String ~default_value:(Some (VString "")) "wlb_username" "Username for accessing the workload balancing host"
 			; field ~in_product_since:rel_george ~internal_only:true ~qualifier:DynamicRO ~ty:(Ref _secret) "wlb_password" "Password for accessing the workload balancing host"
