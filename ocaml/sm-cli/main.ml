@@ -174,7 +174,7 @@ let _ =
 					id
 					status.source_vdi
 					status.dest_vdi
-					(String.concat "," (List.map (fun s -> match s with | Receiving -> "Receiving" | Sending -> "Sending") status.state))
+					(String.concat "," (List.map (fun s -> match s with | Receiving -> "Receiving" | Sending -> "Sending" | Copying -> "Copying") status.state))
 					status.failed) list
 		| [ "task-list" ] ->
 			let tasks = Client.TASK.list ~dbg in
