@@ -43,6 +43,7 @@ type feature =
 	| Storage_motion               (** Enable Storage XenMotion feature *)
 	| VGPU                         (** Enable use of virtual GPUs *)
 	| Integrated_GPU               (** Enable use of integrated GPU passthrough *)
+	| Xen_motion                   (** Enable XenMotion feature *)
 
 (** Convert RPC into {!feature}s *)
 val feature_of_rpc : Rpc.t -> feature
