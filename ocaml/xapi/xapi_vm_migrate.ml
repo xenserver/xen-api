@@ -106,6 +106,8 @@ let migrate_with_retry ~__context dbg vm_uuid xenops_vdi_map xenops_vif_map xeno
 	migrate_with_retries ~__context 3 1 dbg vm_uuid xenops_vdi_map xenops_vif_map xenops
 
 let pool_migrate ~__context ~vm ~host ~options =
+	if (not (Pool_features.is_enabled ~__context Features.Xen_motion)) then
+		raise (Api_errors.Server_error(Api_errors.license_restriction, []));
 	let dbg = Context.string_of_task __context in
 	let session_id = Ref.string_of (Context.get_session_id __context) in
 	let ip = Http.Url.maybe_wrap_IPv6_literal (Db.Host.get_address ~__context ~self:host) in
