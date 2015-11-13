@@ -39,7 +39,7 @@ let has_substr str sub =
       !result
     end
 
-let user_friendly_error_msg = "The Active Directory Plug-in could not complete the command. Additional information in the XenServer log."
+let user_friendly_error_msg = "The Active Directory Plug-in could not complete the command. Additional information in the logs."
 
 open Pervasiveext
 
