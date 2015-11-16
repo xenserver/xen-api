@@ -19,6 +19,7 @@ let base_suite =
 		[
 			Test_basic.test;
 			Test_helpers.test;
+			Test_datamodel_utils.test;
 			Test_db_lowlevel.test;
 			Test_pool_db_backup.test;
 			Test_xapi_db_upgrade.test;
