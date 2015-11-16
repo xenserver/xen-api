@@ -238,7 +238,7 @@ let operation (obj: obj) (x: message) =
 
 	let all =
 		let all_list =
-			if not (List.exists (fun (l, _, _) -> l = DT.Removed) x.DT.msg_lifecycle) then
+			if not (DU.has_been_removed x.DT.msg_lifecycle) then
 				(comments @ unmarshall_code @ session_check_exp @ rbac_check_begin @ gen_body () @ rbac_check_end)
 			else
 				(comments @ List.filter (Stringext.String.startswith "let session_id") unmarshall_code @ session_check_exp @ ["Server_helpers.message_removed_failure"]) in
