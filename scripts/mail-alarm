@@ -22,6 +22,11 @@ from xml.parsers.expat import ExpatError
 from socket import getfqdn
 from xcp import branding
 
+try:
+    VISUAL_PRODUCT_BRAND = branding.OEM_BRAND
+except AttributeError:
+    VISUAL_PRODUCT_BRAND = branding.PRODUCT_BRAND
+
 # Go read man ssmtp.conf
 default_config="""
 mailhub=@MAILHUB@
@@ -121,7 +126,7 @@ class CpuUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: CPU usage on %s "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
+                   VISUAL_PRODUCT_BRAND, self.cls, self.params['name_label'])
     
     def generate_body(self):
         return \
@@ -155,7 +160,7 @@ class NetworkUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = pool_name = get_pool_name()
         return '[%s] %s Alarm: Network usage on %s "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
+                   VISUAL_PRODUCT_BRAND, self.cls, self.params['name_label'])
     
     def generate_body(self):
         return \
@@ -186,7 +191,7 @@ class DiskUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Disk usage on VM "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.params['name_label'])
+                   VISUAL_PRODUCT_BRAND, self.params['name_label'])
     
     def generate_body(self):
         return \
@@ -214,7 +219,7 @@ class Dom0FSUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Filesystem nearly full on "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.params['name_label'])
+                   VISUAL_PRODUCT_BRAND, self.params['name_label'])
     
     def generate_body(self):
         return \
@@ -238,7 +243,7 @@ class Dom0MemUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Dom0 memory demand is high on "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.params['name_label'])
+                   VISUAL_PRODUCT_BRAND, self.params['name_label'])
 
     def generate_body(self):
         return \
@@ -258,7 +263,7 @@ class WlbConsultationFailure(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Attempt to consult wlb for VM "%s" failed' % (self.params['name_label'],
-                   branding.PRODUCT_BRAND, pool_name)
+                   VISUAL_PRODUCT_BRAND, pool_name)
     
     def generate_body(self):
         return \
@@ -293,7 +298,7 @@ class HAHostFailedETG(EmailTextGenerator):
 
     def generate_subject(self):
         pool_name = get_pool_name()
-        return '[%s] %s HA Alarm: %s' % (pool_name, branding.PRODUCT_BRAND, self.text)
+        return '[%s] %s HA Alarm: %s' % (pool_name, VISUAL_PRODUCT_BRAND, self.text)
     
     def generate_body(self):
         return \
@@ -391,7 +396,7 @@ class XapiMessage:
         if generator:
             return generator.generate_subject()
         else:
-            return "[%s] %s Message: %s %s %s" % (self.pool_name, branding.PRODUCT_BRAND,
+            return "[%s] %s Message: %s %s %s" % (self.pool_name, VISUAL_PRODUCT_BRAND,
                                                   self.cls, self.obj_uuid, self.name)
     
     def generate_email_body(self):
