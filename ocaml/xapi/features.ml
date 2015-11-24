@@ -43,6 +43,7 @@ type feature =
 	| Storage_motion
 	| VGPU
 	| Integrated_GPU
+	| VSS
 	| Xen_motion
 	with rpc
 
@@ -76,6 +77,7 @@ let keys_of_features =
 		Storage_motion, ("restrict_storage_xen_motion", Negative, "SXM");
 		VGPU, ("restrict_vgpu", Negative, "vGPU");
 		Integrated_GPU, ("restrict_integrated_gpu_passthrough", Negative, "iGPU");
+		VSS, ("restrict_vss", Negative, "VSS");
 		Xen_motion, ("restrict_xen_motion", Negative, "XenMotion");
 	]
 
