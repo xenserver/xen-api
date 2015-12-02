@@ -872,6 +872,10 @@ let eject ~__context ~host =
 		(* delete me from the database - this will in turn cause PBDs and PIFs to be GCed *)
 		Db.Host.destroy ~__context ~self:host;
 
+		(* Update pool features, in case this host had a different license to the
+		 * rest of the pool. *)
+		Pool_features.update_pool_features ~__context;
+
 		debug "Pool.eject: resetting CPU features";
 		(* Clear the CPU feature masks from the Xen command line *)
 		ignore (Xen_cmdline.delete_cpuid_masks
