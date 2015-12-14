@@ -239,14 +239,16 @@ let hard_shutdown ~__context ~vm =
 		Db.VM.set_suspend_VDI ~__context ~self:vm ~value:Ref.null;
 		Xapi_vm_lifecycle.force_state_reset ~__context ~self:vm ~value:`Halted;
 	end else
-	Xapi_xenops.shutdown ~__context ~self:vm None
+	Xapi_xenops.shutdown ~__context ~self:vm None;
+	Xapi_vm_helpers.shutdown_delay ~__context ~vm
 
 let clean_reboot ~__context ~vm =
 	Xapi_xenops.reboot ~__context ~self:vm (Some !Xapi_globs.domain_shutdown_total_timeout)
 
 let clean_shutdown_with_timeout ~__context ~vm timeout =
 	Db.VM.set_ha_always_run ~__context ~self:vm ~value:false;
-	Xapi_xenops.shutdown ~__context ~self:vm (Some timeout)
+	Xapi_xenops.shutdown ~__context ~self:vm (Some timeout);
+	Xapi_vm_helpers.shutdown_delay ~__context ~vm
 
 let clean_shutdown ~__context ~vm =
 	clean_shutdown_with_timeout ~__context ~vm !Xapi_globs.domain_shutdown_total_timeout
