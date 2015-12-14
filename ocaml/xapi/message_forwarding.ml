@@ -1206,7 +1206,6 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 											(fun session_id rpc ->
 												Client.VM.start rpc session_id vm start_paused force) in
 										Cpuid_helpers.populate_cpu_flags ~__context ~vm ~host;
-										Xapi_vm_helpers.start_delay ~__context ~vm;
 										host
 									))) in
 			update_vbd_operations ~__context ~vm;
