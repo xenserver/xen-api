@@ -234,7 +234,7 @@ let update_pifs ~__context host pifs =
 					let bridges = List.map (fun network -> Db.Network.get_bridge ~__context ~self:network)
 						(network :: vlan_networks @ tunnel_networks) in
 					let n = Netdev.network in
-					let ifs = List.flatten (List.map (fun bridge -> n.Netdev.intf_list bridge) bridges) in
+					let ifs = List.flatten (List.map (fun bridge -> try n.Netdev.intf_list bridge with _ -> []) bridges) in
 					let open Vif_device in
 					let set_carrier vif =
 						if vif.pv then (
