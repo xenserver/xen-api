@@ -44,7 +44,9 @@ let rel_midnight_ride = "midnight-ride"
 let rel_cowley = "cowley"
 let rel_boston = "boston"
 let rel_tampa = "tampa"
-let rel_cream_tls12 = "cream_tls12"
+let rel_clearwater = "clearwater"
+let rel_hfx_tls1_2 = "hfx_tls1_2"
+let rel_augusta = "augusta"
 
 let release_order =
 	[ rel_rio
@@ -57,7 +59,9 @@ let release_order =
 	; rel_cowley
 	; rel_boston
 	; rel_tampa
-	; rel_cream_tls12
+	; rel_clearwater
+	; rel_hfx_tls1_2
+	; rel_augusta
 	]
 
 exception Unknown_release of string
