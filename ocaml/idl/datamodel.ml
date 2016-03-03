@@ -16,9 +16,8 @@
 open Datamodel_types
 
 (* IMPORTANT: Please bump schema vsn if you change/add/remove a _field_.
-              You do not have to bump vsn if you change/add/remove a message *)
-let schema_major_vsn = 5
-let schema_minor_vsn = 76
+              You do not have to bump vsn if you change/add/remove a message
+              (See below...) *)
 
 (* Historical schema versions just in case this is useful later *)
 let rio_schema_major_vsn = 5
@@ -73,11 +72,16 @@ let pool_health_check_release_schema_major_vsn = 5
 let pool_health_check_release_schema_minor_vsn = 75
 
 let cream_tls_1_2_release_schema_major_vsn = 5
-let cream_tls_1_2_release_schema_major_vsn = 76
+let cream_tls_1_2_release_schema_minor_vsn = 76
 
 (* the schema vsn of the last release: used to determine whether we can upgrade or not.. *)
 let last_release_schema_major_vsn = cream_release_schema_major_vsn
 let last_release_schema_minor_vsn = cream_release_schema_minor_vsn
+
+(* IMPORTANT: Please bump schema vsn if you change/add/remove a _field_.
+              You do not have to bump vsn if you change/add/remove a message *)
+let schema_major_vsn = cream_tls_1_2_release_schema_major_vsn
+let schema_minor_vsn = cream_tls_1_2_release_schema_minor_vsn
 
 (** Bindings for currently specified releases *)
 
@@ -4175,11 +4179,11 @@ let host_set_power_on_mode = call
 
 let host_set_ssl_legacy = call
 	~name:"set_ssl_legacy"
-	~lifecycle:[Prototyped, rel_cream_tls12, ""]
-	~doc:"Enable/disable SSLv3 for interoperability with older versions of XenServer. When this is set to a different value, the host immediately restarts its SSL/TLS listening service; typically this takes less than a second but existing connections to it will be broken. XenAPI login sessions will remain valid."
+	~lifecycle:[Published, rel_hfx_tls1_2, ""]
+	~doc:"Enable/disable SSLv3 for interoperability with older versions of the product. When this is set to a different value, the host immediately restarts its SSL/TLS listening service; typically this takes less than a second but existing connections to it will be broken. XenAPI login sessions will remain valid."
 	~params:[
 		Ref _host, "self", "The host";
-		Bool, "value", "True to allow SSLv3 and ciphersuites as used in old XenServer versions";
+		Bool, "value", "True to allow SSLv3 and ciphersuites as used in old product versions.";
 	]
 	~allowed_roles:_R_POOL_OP
 	()
@@ -4464,7 +4468,7 @@ let host =
 		"chipset_info" "Information about chipset features";
 	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_boston, ""] ~ty:(Set (Ref _pci)) "PCIs" "List of PCI devices in the host";
 	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_boston, ""] ~ty:(Set (Ref _pgpu)) "PGPUs" "List of physical GPUs in the host";
-	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_dundee, ""] ~ty:Bool ~default_value:(Some (VBool true)) "ssl_legacy" "Allow SSLv3 protocol and ciphersuites as used by older XenServers. This controls both incoming and outgoing connections. When this is set to a different value, the host immediately restarts its SSL/TLS listening service; typically this takes less than a second but existing connections to it will be broken. XenAPI login sessions will remain valid.";
+	field ~qualifier:DynamicRO ~lifecycle:[Published, rel_hfx_tls1_2, ""] ~ty:Bool ~default_value:(Some (VBool true)) "ssl_legacy" "Allow SSLv3 protocol and ciphersuites as used by older versions of the product. This controls both incoming and outgoing connections. When this is set to a different value, the host immediately restarts its SSL/TLS listening service; typically this takes less than a second but existing connections to it will be broken. XenAPI login sessions will remain valid.";
 	field ~qualifier:RW ~in_product_since:rel_tampa ~default_value:(Some (VMap [])) ~ty:(Map (String, String)) "guest_VCPUs_params" "VCPUs params to apply to all resident guests";
 	field ~qualifier:RW ~in_product_since:rel_cream ~default_value:(Some (VEnum "enabled")) ~ty:host_display "display" "indicates whether the host is configured to output its console to a physical display device";
 	field ~qualifier:DynamicRO ~in_product_since:rel_cream ~default_value:(Some (VSet [VInt 0L])) ~ty:(Set (Int)) "virtual_hardware_platform_versions" "The set of versions of the virtual hardware platform that the host can offer to its guests";
@@ -6451,7 +6455,7 @@ let pool_enable_ssl_legacy = call
 	~name:"enable_ssl_legacy"
 	~in_oss_since:None
 	~lifecycle:[
-		Published, rel_dundee, "";
+		Published, rel_hfx_tls1_2, "";
 	]
 	~params:[Ref _pool, "self", "(ignored)";]
 	~doc:"Sets ssl_legacy true on each host, pool-master last. See Host.ssl_legacy and Host.set_ssl_legacy."
@@ -6462,7 +6466,7 @@ let pool_disable_ssl_legacy = call
 	~name:"disable_ssl_legacy"
 	~in_oss_since:None
 	~lifecycle:[
-		Published, rel_dundee, "";
+		Published, rel_hfx_tls1_2, "";
 	]
 	~params:[Ref _pool, "self", "(ignored)";]
 	~doc:"Sets ssl_legacy true on each host, pool-master last. See Host.ssl_legacy and Host.set_ssl_legacy."
