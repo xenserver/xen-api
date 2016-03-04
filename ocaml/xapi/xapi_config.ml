@@ -37,7 +37,13 @@ let read_config filename =
 		"igd-passthru-vendor-whitelist", Config.Set_string vendor_whitelist;
 		"relax-xsm-sr-check", Config.Set_bool Xapi_globs.relax_xsm_sr_check;
 		"hotfix-fingerprint", Config.Set_string Xapi_globs.trusted_patch_key;
-		"gpumon_stop_timeout", Config.Set_float Xapi_globs.gpumon_stop_timeout;
+		(let cgo = "ciphersuites-good-outbound" in
+		cgo, Config.String (fun s ->
+			D.debug "Processing config %s=%s" cgo s;
+			Xapi_globs.ciphersuites_good_outbound :=
+				(if String.filter_chars s (not ++ String.isspace) <> "" then Some s else None)
+		));
+		"ciphersuites-legacy-outbound", Config.Set_string Xapi_globs.ciphersuites_legacy_outbound;
 	] in
 	try
 		Config.read filename configargs (fun _ _ -> ());
