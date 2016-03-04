@@ -801,14 +801,6 @@ let xapi_globs_conf = "/etc/xensource/xapi_globs.conf"
 let ciphersuites_good_outbound = ref None
 let ciphersuites_legacy_outbound = ref ""
 
-
-  "ciphersuites-good-outbound", Arg.String (fun s -> ciphersuites_good_outbound := if String_plain.trim s <> "" then Some s else None),
-    (fun () -> match !ciphersuites_good_outbound with None -> "" | Some s -> s),
-    "Preferred set of ciphersuites for outgoing TLS connections. (This list must match, or at least contain one of, the GOOD_CIPHERS in the 'xapissl' script for starting the listening stunnel.)";
-
-  "ciphersuites-legacy-outbound", Arg.Set_string ciphersuites_legacy_outbound,
-    (fun () -> !ciphersuites_legacy_outbound), "For backwards compatibility: to be used in addition to ciphersuites-good-outbound for outgoing TLS connections";
-
 let read_external_config () =
 	let unknown_key k v = D.warn "Unknown key/value pairs: (%s, %s)" k v in
 	if Sys.file_exists xapi_globs_conf then begin
