@@ -830,7 +830,9 @@ let xapi_globs_spec =
 	]
 
 let xapi_globs_conf = "/etc/xensource/xapi_globs.conf"
-let ciphersuites_good_outbound = ref None
+let ciphersuites_good_outbound = ref (Some "")
+let _ = (ciphersuites_good_outbound := None)
+
 let ciphersuites_legacy_outbound = ref ""
 
 let read_external_config () =
