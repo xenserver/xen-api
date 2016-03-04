@@ -25,6 +25,13 @@ let read_config filename =
 	let configargs = [
 		"use-xenopsd", Config.Set_bool Xapi_globs.use_xenopsd;
 		Config_shared.disable_logging_for;
+		(let cgo = "ciphersuites-good-outbound" in
+		cgo, Config.String (fun s ->
+			D.debug "Processing config %s=%s" cgo s;
+			Xapi_globs.ciphersuites_good_outbound :=
+				(if String.filter_chars s (not ++ String.isspace) <> "" then Some s else None)
+		));
+		"ciphersuites-legacy-outbound", Config.Set_string Xapi_globs.ciphersuites_legacy_outbound;
 	] in
 	try
 		Config.read filename configargs (fun _ _ -> ())
