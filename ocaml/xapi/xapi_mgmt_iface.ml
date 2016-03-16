@@ -28,6 +28,7 @@ let management_interface_server = ref []
 let listening_all = ref false
 let listening_localhost = ref false
 let listening_himn = ref false
+let stunnel_accept = ref None
 let management_m = Mutex.create ()
 
 let update_mh_info_script = Filename.concat Fhs.libexecdir "update-mh-info"
@@ -38,13 +39,14 @@ let update_mh_info interface =
 
 let stunnel_m = Mutex.create ()
 
-let restart_stunnel_nomutex ~__context =
+let restart_stunnel_nomutex ~__context ~accept =
+	info "Restarting stunnel (accepting connections on %s)" accept;
 	let back_compat ~__context =
 		if Stunnel.is_legacy_protocol_and_ciphersuites_allowed ()
 		then [ "back_compat_6_5" ]
 		else []
 	in
-	let xapissl_args = [ "restart" ] @ (back_compat ~__context) in
+	let xapissl_args = [ "restart"; accept ] @ (back_compat ~__context) in
 	let (_ : Thread.t) = Thread.create (fun () ->
 		Mutex.execute management_m (fun () ->
 			Forkhelpers.execute_command_get_output "/sbin/service" ( "xapissl" :: xapissl_args )
@@ -52,12 +54,18 @@ let restart_stunnel_nomutex ~__context =
 	) () in
 	()
 
-let restart_stunnel ~__context =
+let restart_stunnel ~__context ~accept =
 	Mutex.execute stunnel_m (fun () ->
-		restart_stunnel_nomutex ~__context
+		stunnel_accept := Some accept;
+		restart_stunnel_nomutex ~__context ~accept
 	)
 
-let reconfigure_stunnel = restart_stunnel
+let reconfigure_stunnel ~__context =
+	Mutex.execute stunnel_m (fun () ->
+		match !stunnel_accept with
+			| None -> () (* We've not yet started stunnel; no action needed *)
+			| Some accept -> restart_stunnel_nomutex ~__context ~accept
+	)
 
 let stop () =
 	debug "Shutting down the old management interface (if any)";
@@ -71,28 +79,34 @@ let stop () =
  * _the_ management interface. Slaves in a pool use the IP address of this interface to connect
  * the pool master. *)
 let start ~__context ?addr () =
-	let addr, socket =
+	let socket, accept =
 		match addr with
 			| None ->
 					info "Starting new server (listening on all IP addresses)";
 					begin
 						try (* Is it IPv6 ? *)
 							let addr = Unix.inet6_addr_any in
-							addr, Xapi_http.bind (Unix.ADDR_INET(addr, Xapi_globs.http_port))
+							Xapi_http.bind (Unix.ADDR_INET(addr, Xapi_globs.http_port)),
+							":::443"
 						with _ -> (* No. *)
 							let addr = Unix.inet_addr_any in
-							addr, Xapi_http.bind (Unix.ADDR_INET(addr, Xapi_globs.http_port))
+							Xapi_http.bind (Unix.ADDR_INET(addr, Xapi_globs.http_port)),
+							"443"
 					end
 			| Some ip ->
 					info "Starting new server (listening on %s)" ip;
 					let addr = Unix.inet_addr_of_string ip in
-					addr, Xapi_http.bind (Unix.ADDR_INET(addr, Xapi_globs.http_port))
+					let sockaddr = Unix.ADDR_INET(addr, Xapi_globs.http_port) in
+					Xapi_http.bind sockaddr,
+					match Unix.domain_of_sockaddr sockaddr with
+					| Unix.PF_INET6 -> "::1:443"
+					| _ -> "127.0.0.1:443"
 	in
 	Http_svr.start Xapi_http.server socket;
 	management_interface_server := socket :: !management_interface_server;
 
 	debug "Restarting stunnel";
-	restart_stunnel ~__context;
+	restart_stunnel ~__context ~accept;
 	if Pool_role.is_master () && !listening_all then begin
 		(* NB if we synchronously bring up the management interface on a master with a blank
 		   database this can fail... this is ok because the database will be synchronised later *)
