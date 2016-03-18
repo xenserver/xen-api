@@ -21,6 +21,17 @@ open Stringext
 module D=Debug.Debugger(struct let name="xapi" end)
 open D
 
+let rec string_trim s =
+  let l = String.length s in
+  if l = 0 then
+    s
+  else if s.[0] = ' ' || s.[0] = '\t' || s.[0] = '\n' || s.[0] = '\r' then
+    string_trim (String.sub s 1 (l-1))
+  else if s.[l-1] = ' ' || s.[l-1] = '\t' || s.[l-1] = '\n' || s.[l-1] = '\r' then
+    string_trim (String.sub s 0 (l-1))
+  else
+    s
+
 let read_config filename =
 	let configargs = [
 		"use-xenopsd", Config.Set_bool Xapi_globs.use_xenopsd;
@@ -30,7 +41,7 @@ let read_config filename =
 		cgo, Config.String (fun s ->
 			D.debug "Processing config %s=%s" cgo s;
 			Xapi_globs.ciphersuites_good_outbound :=
-				(if String.filter_chars s (not ++ String.isspace) <> "" then Some s else None)
+				(if string_trim s <> "" then Some s else None)
 		));
 		"ciphersuites-legacy-outbound", Config.Set_string Xapi_globs.ciphersuites_legacy_outbound;
 	] in
