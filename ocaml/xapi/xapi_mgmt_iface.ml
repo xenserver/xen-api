@@ -38,13 +38,26 @@ let update_mh_info interface =
 
 let stunnel_m = Mutex.create ()
 
-let restart_stunnel () =
+let restart_stunnel_nomutex ~__context =
+	let back_compat ~__context =
+		if Stunnel.is_legacy_protocol_and_ciphersuites_allowed ()
+		then [ "back_compat_6_5" ]
+		else []
+	in
+	let xapissl_args = [ "restart" ] @ (back_compat ~__context) in
 	let (_ : Thread.t) = Thread.create (fun () ->
 		Mutex.execute management_m (fun () ->
-			Forkhelpers.execute_command_get_output "/sbin/service" [ "xapissl"; "restart" ]
+			Forkhelpers.execute_command_get_output "/sbin/service" ( "xapissl" :: xapissl_args )
 		)
 	) () in
 	()
+
+let restart_stunnel ~__context =
+	Mutex.execute stunnel_m (fun () ->
+		restart_stunnel_nomutex ~__context
+	)
+
+let reconfigure_stunnel = restart_stunnel
 
 let stop () =
 	debug "Shutting down the old management interface (if any)";
@@ -79,7 +92,7 @@ let start ~__context ?addr () =
 	management_interface_server := socket :: !management_interface_server;
 
 	debug "Restarting stunnel";
-	restart_stunnel ();
+	restart_stunnel ~__context;
 	if Pool_role.is_master () && !listening_all then begin
 		(* NB if we synchronously bring up the management interface on a master with a blank
 		   database this can fail... this is ok because the database will be synchronised later *)
