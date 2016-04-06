@@ -474,7 +474,7 @@ let is_host_alive ~__context ~host =
 	false
   end
 
-let create ~__context ~uuid ~name_label ~name_description ~hostname ~address ~external_auth_type ~external_auth_service_name ~external_auth_configuration ~license_params ~edition ~license_server ~local_cache_sr ~chipset_info =
+let create ~__context ~uuid ~name_label ~name_description ~hostname ~address ~external_auth_type ~external_auth_service_name ~external_auth_configuration ~license_params ~edition ~license_server ~local_cache_sr ~chipset_info ~ssl_legacy =
 
   let make_new_metrics_object ref =
 	Db.Host_metrics.create ~__context ~ref
@@ -514,7 +514,7 @@ let create ~__context ~uuid ~name_label ~name_description ~hostname ~address ~ex
 	~power_on_mode:""
 	~power_on_config:[]
 	~local_cache_sr
-	~ssl_legacy:true
+	~ssl_legacy
 	~guest_VCPUs_params:[]
   ;
   (* If the host we're creating is us, make sure its set to live *)
