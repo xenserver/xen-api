@@ -1745,14 +1745,12 @@ let apply_edition ~__context ~self ~edition =
 	Xapi_pool_license.apply_edition_with_rollback ~__context ~hosts ~edition ~apply_fn
 
 
-let disable_ssl_legacy ~__context ~self =
+let set_ssl_legacy_on_each_host ~__context ~self ~value =
 	let f ~rpc ~session_id ~host =
-		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:false
+		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value
 	in
 	call_fn_on_slaves_then_master ~__context f
 
-let enable_ssl_legacy ~__context ~self =
-	let f ~rpc ~session_id ~host =
-		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:true
-	in
-	call_fn_on_slaves_then_master ~__context f
+let disable_ssl_legacy = set_ssl_legacy_on_each_host ~value:false
+
+let enable_ssl_legacy = set_ssl_legacy_on_each_host ~value:true
