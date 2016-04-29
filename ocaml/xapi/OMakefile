@@ -73,6 +73,7 @@ OCamlProgram(xenstore_copy, xenstore_dump xenstore_copy)
 XAPI_MODULES = $(COMMON) \
 	../util/table \
 	balloon \
+	daemon_manager \
 	system_domains \
 	local_work_queue \
 	../xva/xva \
