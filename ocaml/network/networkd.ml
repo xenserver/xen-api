@@ -74,6 +74,7 @@ let handle_shutdown () =
 let read_config () =
 	let configargs = [
 		"enic-workaround-until-version", Config.Set_string Network_server.enic_workaround_until_version;
+		"mac-table-size", Config.Set_int Network_utils.mac_table_size;
 	] in
 	try
 		Config.read Fhs.networkdconf configargs (fun _ _ -> ());
