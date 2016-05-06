@@ -398,6 +398,7 @@ let rec create_or_get_host_on_master __context rpc session_id (host_ref, host) :
 				 * been added to the constructor. *)
 				~local_cache_sr
         ~chipset_info:host.API.host_chipset_info
+        ~ssl_legacy:host.API.host_ssl_legacy
 			in
 
 			(* Copy other-config into newly created host record: *)
@@ -1711,14 +1712,13 @@ let disable_local_storage_caching ~__context ~self =
 		raise (Api_errors.Server_error (Api_errors.hosts_failed_to_disable_caching, List.map Ref.string_of failed_hosts))
 	else ()
 
-let disable_ssl_legacy ~__context ~self =
-	let f ~rpc ~session_id ~host =
-		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:false
-	in
-	call_fn_on_slaves_then_master ~__context f
+let set_ssl_legacy_on_each_host ~__context ~self ~value =
+        let f ~rpc ~session_id ~host =
+                Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value
+        in
+        call_fn_on_slaves_then_master ~__context f
 
-let enable_ssl_legacy ~__context ~self =
-	let f ~rpc ~session_id ~host =
-		Client.Host.set_ssl_legacy ~rpc ~session_id ~self:host ~value:true
-	in
-	call_fn_on_slaves_then_master ~__context f
+let disable_ssl_legacy = set_ssl_legacy_on_each_host ~value:false
+
+let enable_ssl_legacy = set_ssl_legacy_on_each_host ~value:true
+
