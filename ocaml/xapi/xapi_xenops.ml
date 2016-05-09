@@ -1726,7 +1726,9 @@ let transform_xenops_exn ~__context ~vm f =
 		) fmt in
 	try
 		f ()
-	with
+	with e ->
+		Backtrace.is_important e;
+		begin match e with
 		| Internal_error msg -> internal "xenopsd internal error: %s" msg
 		| Already_exists(thing, id) -> internal "Object with type %s and id %s already exists in xenopsd" thing id
 		| Does_not_exist(thing, id) -> internal "Object with type %s and id %s does not exist in xenopsd" thing id
@@ -1774,6 +1776,8 @@ let transform_xenops_exn ~__context ~vm f =
 			reraise Api_errors.task_cancelled [ Ref.string_of task ]
 		| Storage_backend_error(code, params) -> reraise code params
 		| PCIBack_not_loaded -> internal "pciback has not loaded"
+		| e -> raise e
+		end
 
 let refresh_vm ~__context ~self =
 	let id = id_of_vm ~__context ~self in
