@@ -315,3 +315,15 @@ let remap_vif vif_map vif =
 		if List.mem_assoc device vif_map
 		then (debug "Remapping VIF: %s" device; {vif with Vif.backend = (List.assoc device vif_map)})
 		else vif
+
+
+let chunks size lst =
+	List.fold_left (fun acc op ->
+		match acc with
+		| [] -> [[op]]
+		| xs::xss ->
+			if List.length xs < size
+			then (op::xs)::xss
+			else [op]::xs::xss
+	) [] lst
+	|> List.map (fun xs -> List.rev xs) |> List.rev
