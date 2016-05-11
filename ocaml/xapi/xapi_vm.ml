@@ -200,7 +200,7 @@ let start ~__context ~vm ~start_paused ~force =
 	match vmr.API.vM_VGPUs with
 	| [] -> Xapi_xenops.start ~__context ~self:vm start_paused
 	| _ ->
-		Xapi_gpumon.with_gpumon_stopped
+		Xapi_gpumon.with_gpumon_stopped ~timeout:!Xapi_globs.gpumon_stop_timeout
 			(fun () -> Xapi_xenops.start ~__context ~self:vm start_paused)
 
 (** For VM.start_on and VM.resume_on the message forwarding layer should only forward here
