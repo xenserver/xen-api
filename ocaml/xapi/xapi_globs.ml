@@ -730,6 +730,8 @@ let redo_log_max_startup_time = ref 5.
 (** The delay between each attempt to connect to the block device I/O process *)
 let redo_log_connect_delay = ref 0.1
 
+let gpumon_stop_timeout = ref 60.0
+
 (* Fingerprint of default patch key *)
 let citrix_patch_key = "NERDNTUzMDMwRUMwNDFFNDI4N0M4OEVCRUFEMzlGOTJEOEE5REUyNg=="
 (* Used only for testing hotfixes *)
