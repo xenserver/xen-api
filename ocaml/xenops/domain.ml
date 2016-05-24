@@ -119,16 +119,21 @@ let make ~xc ~xs info uuid =
 	let name = if info.name <> "" then info.name else sprintf "Domain-%d" domid in
 	try
 		let dom_path = xs.Xs.getdomainpath domid in
+		let xenops_dom_path = sprintf "/xenops/domain/%d" domid in
 		let vm_path = "/vm/" ^ (Uuid.to_string uuid) in
 		let vss_path = "/vss/" ^ (Uuid.to_string uuid) in
 		let roperm = Xenbus.roperm_for_guest domid in
 		let rwperm = Xenbus.rwperm_for_guest domid in
+		let zeroperm = Xenbus_utils.rwperm_for_guest 0 in
 		debug "Regenerating the xenstored tree under: [%s]" dom_path;
 
 		Xs.transaction xs (fun t ->
 			(* Clear any existing rubbish in xenstored *)
 			t.Xst.rm dom_path;
+			t.Xst.rm xenops_dom_path;
+
 			t.Xst.mkdirperms dom_path roperm;
+			t.Xst.mkdirperms xenops_dom_path zeroperm;
 
 			t.Xst.rm vm_path;
 			t.Xst.mkdirperms vm_path roperm;
@@ -145,11 +150,24 @@ let make ~xc ~xs info uuid =
 				let ent = sprintf "%s/%s" dom_path dir in
 				t.Xst.mkdirperms ent roperm
 			) [ "cpu"; "memory" ];
+
+
+			let mksubdirs base dirs perms =
+				List.iter (fun dir ->
+					let ent = base ^ "/" ^ dir in
+					t.Xst.mkdirperms ent perms
+				) (
+					dirs
+				) in
+
 			(* create read/write nodes for the guest to use *)
-			List.iter (fun dir ->
-				let ent = sprintf "%s/%s" dom_path dir in
-				t.Xst.mkdirperms ent rwperm
-			) [ "device"; "error"; "drivers"; "control"; "attr"; "data"; "messages" ];
+			mksubdirs
+				dom_path
+				[ "device"; "error"; "drivers"; "control"; "attr"; "data"; "messages"; ]
+				rwperm;
+
+			(* ...and a few corresponding private nodes for us to use. *)
+			mksubdirs xenops_dom_path ["device"] zeroperm;
 		);
 
 		xs.Xs.writev vm_path [
@@ -278,6 +296,7 @@ let hard_shutdown_all_vbds ~xc ~xs ?(extra_debug_paths = []) (devices: device li
 
 let destroy ?(preserve_xs_vm=false) ~xc ~xs domid =
 	let dom_path = xs.Xs.getdomainpath domid in
+	let xenops_dom_path = sprintf "/xenops/domain/%d" domid in
 
 	let all_devices = list_devices_between ~xs 0 domid in
 	debug "Domain.destroy: all known devices = [ %a ]" (fun () -> String.concat "; ")
@@ -343,9 +362,11 @@ let destroy ?(preserve_xs_vm=false) ~xc ~xs domid =
 		begin try xs.Xs.rm (xs.Xs.read (dom_path ^ "/vss")) with _ -> () end;
 	);
 
-	(* Delete the /local/domain/<domid> and all the backend device paths *)
+	(* Delete /local/domain/<domid>, /xenops/domain/<domid>
+	 * and all the backend device paths *)
 	debug "Domain.destroy: rm %s" dom_path;
 	xs.Xs.rm dom_path;
+	xs.Xs.rm xenops_dom_path;
 	debug "Domain.destroy: deleting backend paths";
 	let backend_path = xs.Xs.getdomainpath 0 ^ "/backend" in
 	let all_backend_types = try xs.Xs.directory backend_path with _ -> [] in

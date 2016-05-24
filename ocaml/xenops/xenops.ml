@@ -205,7 +205,7 @@ let list_devices ~xs ~domid =
 	    Xenbus.to_string_desc (Xenbus.of_string (xs.Xs.read (sprintf "%s/state" path)))
 	  with _ -> "gone" in
 	List.iter (fun device ->
-		     let fe = frontend_path_of_device ~xs device
+		     let fe = frontend_rw_path_of_device ~xs device
 		     and be = backend_path_of_device ~xs device in
 		     let bdev = try xs.Xs.read (sprintf "%s/dev" be) with _ -> "" in
 		     printf "%s[%d] is %s to dom(%d) ty(%s) devid(%d %s) state(%s)\n"

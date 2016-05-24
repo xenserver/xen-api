@@ -60,10 +60,17 @@ let backend_path ~xs (backend: endpoint) (domu: Xc.domid) =
 (** Location of the backend in xenstore *)
 let backend_path_of_device ~xs (x: device) = backend_path ~xs x.backend x.frontend.domid
 
-(** Location of the frontend in xenstore *)
-let frontend_path_of_device ~xs (x: device) = 
+(** Location of the frontend in xenstore: this is owned by the guest. *)
+let frontend_rw_path_of_device ~xs (x: device) =
   sprintf "%s/device/%s/%d"
     (xs.Xs.getdomainpath x.frontend.domid)
+    (string_of_kind x.frontend.kind)
+    x.frontend.devid
+
+(** Location of the frontend read-only path (owned by dom0 not guest) in xenstore *)
+let frontend_ro_path_of_device ~xs (x: device) =
+  sprintf "/xenops/domain/%d/device/%s/%d"
+    x.frontend.domid
     (string_of_kind x.frontend.kind)
     x.frontend.devid
 
