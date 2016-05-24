@@ -47,7 +47,7 @@ let cancel_path_of ~xs = function
 	| TestPath x -> x
 
 let domain_shutdown_path_of ~xs = function
-	| Device device -> frontend_path_of_device ~xs device ^ "/tools/xenops/shutdown"
+	| Device device -> frontend_rw_path_of_device ~xs device ^ "/tools/xenops/shutdown"
 	| Domain domid -> Printf.sprintf "%s/tools/xenops/shutdown" (xs.Xs.getdomainpath domid)
 	| Qemu (backend, _) ->
 		(* We only need to cancel when the backend domain shuts down. It will
