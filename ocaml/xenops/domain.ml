@@ -128,16 +128,13 @@ let make ~xc ~xs info uuid =
 		Xs.transaction xs (fun t ->
 			(* Clear any existing rubbish in xenstored *)
 			t.Xst.rm dom_path;
-			t.Xst.mkdir dom_path;
-			t.Xst.setperms dom_path roperm;
+			t.Xst.mkdirperms dom_path roperm;
 
 			t.Xst.rm vm_path;
-			t.Xst.mkdir vm_path;
-			t.Xst.setperms vm_path roperm;
+			t.Xst.mkdirperms vm_path roperm;
 
 			t.Xst.rm vss_path;
-			t.Xst.mkdir vss_path;
-			t.Xst.setperms vss_path rwperm;
+			t.Xst.mkdirperms vss_path rwperm;
 
 			t.Xst.write (dom_path ^ "/vm") vm_path;
 			t.Xst.write (dom_path ^ "/vss") vss_path;
@@ -146,14 +143,12 @@ let make ~xc ~xs info uuid =
 			(* create cpu and memory directory with read only perms *)
 			List.iter (fun dir ->
 				let ent = sprintf "%s/%s" dom_path dir in
-				t.Xst.mkdir ent;
-				t.Xst.setperms ent roperm
+				t.Xst.mkdirperms ent roperm
 			) [ "cpu"; "memory" ];
 			(* create read/write nodes for the guest to use *)
 			List.iter (fun dir ->
 				let ent = sprintf "%s/%s" dom_path dir in
-				t.Xst.mkdir ent;
-				t.Xst.setperms ent rwperm
+				t.Xst.mkdirperms ent rwperm
 			) [ "device"; "error"; "drivers"; "control"; "attr"; "data"; "messages" ];
 		);
 
