@@ -4650,3 +4650,17 @@ let lvhd_enable_thin_provisioning printer rpc session_id params =
 	let allocation_quantum = Record_util.bytes_of_string "allocation-quantum" (List.assoc "allocation-quantum" params) in
 	let ref = Client.SR.get_by_uuid rpc session_id uuid in
 	Client.LVHD.enable_thin_provisioning rpc session_id ref initial_allocation allocation_quantum
+
+module PVS_farm = struct
+	let introduce printer rpc session_id params =
+		let name  = List.assoc "name" params in
+		let ref   = Client.PVS_farm.introduce ~rpc ~session_id ~name in
+		let uuid  = Client.PVS_farm.get_uuid rpc session_id ref in
+		printer (Cli_printer.PList [uuid])
+
+	let forget printer rpc session_id params =
+		let uuid  = List.assoc "uuid" params in
+		let ref   = Client.PVS_farm.get_by_uuid ~rpc ~session_id ~uuid in
+		Client.PVS_farm.forget rpc session_id ref
+end
+
