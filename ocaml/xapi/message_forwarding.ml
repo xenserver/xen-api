@@ -3851,5 +3851,27 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 
 	module VGPU_type = struct end
 	module LVHD = struct end
+
+	module PVS_farm = struct
+		let introduce ~__context ~name =
+			info "PVS_farm.introduce %s" name;
+			Local.PVS_farm.introduce ~__context ~name
+
+		let forget ~__context ~self =
+			info "PVS_farm.forget";
+			Local.PVS_farm.forget ~__context ~self
+
+		let set_name ~__context ~self ~value =
+			info "PVS_farm.set_name %s" value;
+			Local.PVS_farm.set_name ~__context ~self ~value
+
+		let add_cache_storage ~__context ~self ~value =
+			info "PVS_farm.add_cache_storage";
+			Local.PVS_farm.add_cache_storage ~__context ~self ~value
+
+		let remove_cache_storage ~__context ~self ~value =
+			info "PVS_farm.remove_cache_storage";
+			Local.PVS_farm.remove_cache_storage ~__context ~self ~value
+	end
 end
 

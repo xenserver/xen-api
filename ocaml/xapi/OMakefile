@@ -277,6 +277,7 @@ XAPI_MODULES = $(COMMON) \
 	../util/rpc_retry \
 	xapi \
 	cluster_stack_constraints \
+	xapi_pvs_farm \
 
 OCamlProgram(xapi, xapi_main $(XAPI_MODULES))
 
