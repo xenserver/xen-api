@@ -69,6 +69,7 @@ XAPI_MODULES = $(COMMON) \
 	../util/table \
 	balloon \
 	map_check \
+	systemctl \
 	system_domains \
 	local_work_queue \
 	../xva/xva \
