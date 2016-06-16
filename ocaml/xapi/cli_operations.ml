@@ -4664,4 +4664,21 @@ module PVS_farm = struct
 		let ref   = Client.PVS_farm.get_by_uuid ~rpc ~session_id ~uuid in
 		Client.PVS_farm.forget rpc session_id ref
 end
+module PVS_server = struct
+	let introduce printer rpc session_id params =
+		let addresses  = List.assoc "addresses" params   |> String.split ',' in
+		let first_port = List.assoc "first-port" params  |> Int64.of_string in
+		let last_port  = List.assoc "last-port" params   |> Int64.of_string in
+		let farm_uuid  = List.assoc "farm-uuid" params in
+		let farm = Client.PVS_farm.get_by_uuid
+			~rpc ~session_id ~uuid:farm_uuid in
+		let ref = Client.PVS_server.introduce
+			~rpc ~session_id ~addresses ~first_port ~last_port ~farm in
+		let uuid = Client.PVS_server.get_uuid ~rpc ~session_id ~self:ref in
+		printer (Cli_printer.PList [uuid])
 
+	let forget printer rpc session_id params =
+		let uuid  = List.assoc "uuid" params in
+		let ref   = Client.PVS_server.get_by_uuid ~rpc ~session_id ~uuid in
+		Client.PVS_server.forget rpc session_id ref
+end
