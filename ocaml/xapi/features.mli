@@ -42,6 +42,7 @@ type feature =
 	| VIF_locking                  (** Enable locking of VIFs to specific MAC addresses and IP addresses. *)
 	| Storage_motion               (** Enable Storage XenMotion feature *)
 	| VGPU                         (** Enable use of virtual GPUs *)
+	| Ssl_legacy_switch            (** Enable the control switch for SSL/TLS legacy-mode. *)
 
 (** Convert RPC into {!feature}s *)
 val feature_of_rpc : Rpc.t -> feature
