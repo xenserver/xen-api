@@ -30,3 +30,34 @@ let update ~__context =
 let on_xapi_start ~__context =
 	enable ();
 	update ~__context
+
+let pool_update ~__context =
+	let hosts = Db.Host.get_all ~__context in
+	Helpers.call_api_functions ~__context (fun rpc session_id ->
+		List.iter
+			(fun host ->
+				try Client.Host.update_cluster_stack ~rpc ~session_id ~host
+				with Api_errors.Server_error (code, _)
+					when code = Api_errors.host_offline -> ())
+			hosts)
+
+let manage ~__context =
+	let classes = ["host"] in
+	let timeout = 30.0 in
+	let token = "" in
+	Helpers.call_api_functions ~__context (fun rpc session_id ->
+		let rec watch ~token =
+			let open Event_types in
+			let event_from_rpc =
+				Client.Event.from ~rpc ~session_id ~classes ~token ~timeout in
+			let event_from = Event_types.event_from_of_rpc event_from_rpc in
+			if List.exists
+				(fun event -> event.op = `add || event.op = `del)
+				event_from.events
+			then begin
+				try pool_update ~__context
+				with e -> debug "Cluster_stack.manage caught %s" (Printexc.to_string e)
+			end;
+			watch ~token:event_from.token
+		in
+		watch ~token)

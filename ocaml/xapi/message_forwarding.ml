@@ -2534,6 +2534,13 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 			do_op_on ~local_fn ~__context ~host
 				(fun session_id rpc ->
 					Client.Host.apply_guest_agent_config rpc session_id host)
+
+		let update_cluster_stack ~__context ~host =
+			info "Host.update_cluster_stack: host = '%s'" (host_uuid ~__context host);
+			let local_fn = Local.Host.update_cluster_stack ~host in
+			do_op_on ~local_fn ~__context ~host
+				(fun session_id rpc ->
+					Client.Host.update_cluster_stack rpc session_id host)
 	end
 
 	module Host_crashdump = struct

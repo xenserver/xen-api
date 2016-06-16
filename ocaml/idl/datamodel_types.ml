@@ -53,6 +53,7 @@ let rel_creedence = "creedence"
 let rel_cream = "cream"
 let rel_indigo = "indigo"
 let rel_dundee = "dundee"
+let rel_gfs2 = "gfs2"
 
 let release_order =
 	[ rel_rio
@@ -74,6 +75,7 @@ let release_order =
 	; rel_cream
 	; rel_indigo
 	; rel_dundee
+	; rel_gfs2
 	]
 
 exception Unknown_release of string

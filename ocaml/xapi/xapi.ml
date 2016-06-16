@@ -994,6 +994,7 @@ let server_init() =
           (fun () -> call_extauth_hook_script_before_xapi_initialize ~__context);
       "Calling on_xapi_initialize event hook in the external authentication plugin", [ Startup.NoExnRaising; Startup.OnThread ],
           (fun () -> event_hook_auth_on_xapi_initialize_async ~__context);
+      "Starting cluster stack manager", [Startup.OnlyMaster; Startup.OnThread], (fun () -> Cluster_stack.manage ~__context)
     ];
 
     debug "startup: startup sequence finished");

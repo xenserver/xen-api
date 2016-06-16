@@ -4536,6 +4536,17 @@ let host_apply_guest_agent_config = call
 	~allowed_roles:_R_POOL_ADMIN
 	()
 
+let host_update_cluster_stack = call
+	~name:"update_cluster_stack"
+	~lifecycle:[Published, rel_gfs2, ""]
+	~doc:"Refresh corosync on the specified host"
+	~params:[
+		Ref _host, "host", "The host";
+	]
+	~hide_from_docs:true
+	~allowed_roles:_R_LOCAL_ROOT_ONLY
+	()
+
 (** Hosts *)
 let host =
     create_obj ~in_db:true ~in_product_since:rel_rio ~in_oss_since:oss_since_303 ~internal_deprecated_since:None ~persist:PersistEverything ~gen_constructor_destructor:false ~name:_host ~descr:"A physical host" ~gen_events:true
@@ -4624,6 +4635,7 @@ let host =
 		 host_disable_display;
 		 host_set_ssl_legacy;
 		 host_apply_guest_agent_config;
+		 host_update_cluster_stack;
 		 ]
       ~contents:
         ([ uid _host;

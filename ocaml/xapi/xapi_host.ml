@@ -1643,3 +1643,6 @@ let apply_guest_agent_config ~__context ~host =
 	let pool = Helpers.get_pool ~__context in
 	let config = Db.Pool.get_guest_agent_config ~__context ~self:pool in
 	Xapi_xenops.apply_guest_agent_config ~__context config
+
+let update_cluster_stack ~__context ~host =
+	Cluster_stack.update ~__context

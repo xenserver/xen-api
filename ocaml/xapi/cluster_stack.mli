@@ -15,3 +15,5 @@
 val update : __context:Context.t -> unit
 
 val on_xapi_start : __context:Context.t -> unit
+
+val manage : __context:Context.t -> unit
