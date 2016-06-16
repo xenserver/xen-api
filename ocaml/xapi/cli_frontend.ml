@@ -2634,7 +2634,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
 		};
 		"pvs-server-introduce",
 		{
-			reqd=["addresses"; "first-port"; "last-port"; "pvs-farm-uuid"];
+			reqd=["addresses"; "first-port"; "last-port"; "farm-uuid"];
 			optn=[];
 			help="introduce new PVS server";
 			implementation=No_fd Cli_operations.PVS_server.introduce;

@@ -803,6 +803,7 @@ let gen_cmds rpc session_id =
 		  @ (make_param_funs (Client.Alert.get_all) (Client.Alert.get_all_records_where) (Client.Alert.get_by_uuid) (alert_record) "alert" [] ["uuid";"message";"level";"timestamp";"system";"task"] rpc session_id)
 		 *)
 		(make_param_funs (Client.PVS_farm.get_all) (Client.PVS_farm.get_all_records_where) (Client.PVS_farm.get_by_uuid) (pvs_farm_record) "pvs-farm" [] ["uuid";"name";"cache-storage"] rpc session_id) @
+		(make_param_funs (Client.PVS_server.get_all) (Client.PVS_server.get_all_records_where) (Client.PVS_server.get_by_uuid) (pvs_server_record) "pvs-server" [] ["uuid"; "addresses"; "farm"] rpc session_id) @
 		[]
 
 (* NB, might want to put these back in at some point
