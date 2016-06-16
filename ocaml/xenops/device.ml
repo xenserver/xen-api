@@ -1653,7 +1653,7 @@ with rpc
 (* Display output / keyboard input *)
 type disp_opt =
 	| NONE
-	| VNC of disp_intf_opt * string option * bool * int * string (* IP address, auto-allocate, port if previous false, keymap *)
+	| VNC of disp_intf_opt * string option * bool * int * string option (* IP address, auto-allocate, port if previous false, keymap *)
 	| SDL of disp_intf_opt * string (* X11 display *)
 	| Passthrough of int option
 	| Intel of disp_intf_opt * int option
@@ -1774,17 +1774,17 @@ let cmdline_of_disp info =
 	    | IGD_passthrough -> ["-std-vga"; "-gfx_passthru"]
 	in
 	let videoram_opt = ["-videoram"; string_of_int info.video_mib] in
-	let vnc_opts_of ip_addr_opt auto port keymap =
-                let unused_opt = if auto then ["-vncunused"] else [] in
-                let vnc_opt =
-                        let ip_addr = Opt.default "127.0.0.1" ip_addr_opt
-                        and port = if auto then "1" else string_of_int port in
-                        ["-vnc"; ip_addr ^ ":" ^ port] in
-                let keymap_opt = ["-k"; keymap] in
-                List.flatten [unused_opt; vnc_opt; keymap_opt]
-	in
 	let dom0_input_opts x =
 		(maybe_with_default [] (fun i -> ["-dom0-input"; string_of_int i]) x)
+	in
+	let vnc_opts_of ip_addr_opt auto port keymap =
+		let unused_opt = if auto then ["-vncunused"] else [] in
+		let vnc_opt =
+			let ip_addr = Opt.default "127.0.0.1" ip_addr_opt
+			and port = if auto then "1" else string_of_int port in
+			["-vnc"; ip_addr ^ ":" ^ port] in
+		let keymap_opt = match keymap with Some k -> ["-k"; k] | None -> [] in
+		List.flatten [unused_opt; vnc_opt; keymap_opt]
 	in
 	let disp_options, wait_for_port =
 		match info.disp with
