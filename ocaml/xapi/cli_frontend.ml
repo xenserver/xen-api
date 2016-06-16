@@ -2615,8 +2615,24 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
 			help="Enable thin-provisioning on an LVHD SR.";
 			implementation=No_fd Cli_operations.lvhd_enable_thin_provisioning;
 			flags=[];
+		};
+		"pvs-farm-introduce",
+		{
+			reqd=["name"];
+			optn=[];
+			help="introduce new PVS farm";
+			implementation=No_fd Cli_operations.PVS_farm.introduce;
+			flags=[];
+		};
+		"pvs-farm-forget",
+		{
+			reqd=["uuid"];
+			optn=[];
+			help="forget a PVS farm";
+			implementation=No_fd Cli_operations.PVS_farm.forget;
+			flags=[];
 		}
-  ]
+	]
 
 let cmdtable : (string, cmd_spec) Hashtbl.t =
   Hashtbl.create 50
