@@ -1709,9 +1709,11 @@ let pvs_farm_record rpc session_id pvs_farm =
 					let sr = Client.SR.get_by_uuid rpc session_id sr_uuid in
 					Client.PVS_farm.remove_cache_storage rpc session_id !_ref sr)
 				()
-			; make_field ~name:"servers"
+			; make_field ~name:"servers-uuids"
 				~get:(fun () -> (x ()).API.pVS_farm_servers
 					|> List.map get_uuid_from_ref |> String.concat "; ")
+				~get_set:(fun () -> (x ()).API.pVS_farm_servers
+					|> List.map get_uuid_from_ref)
 				()
 			]
 		}
@@ -1736,7 +1738,7 @@ let pvs_server_record rpc session_id pvs_farm =
 			; make_field ~name:"last-port"
 				~get:(fun () -> (x ()).API.pVS_server_last_port |> Int64.to_string)
 				()
-			; make_field ~name:"farm"
+			; make_field ~name:"farm-uuids"
 				~get:(fun () -> (x ()).API.pVS_server_farm |> get_uuid_from_ref)
 				()
 			]
