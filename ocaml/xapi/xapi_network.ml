@@ -94,11 +94,12 @@ let attach_internal ?(management_interface=false) ~__context ~self () =
 	   we might be just about to loose our current management interface... *)
 	List.iter (fun pif ->
 		let uuid = Db.PIF.get_uuid ~__context ~self:pif in
-		if Db.PIF.get_managed ~__context ~self:pif then
+		if Db.PIF.get_managed ~__context ~self:pif then begin
 			if Db.PIF.get_currently_attached ~__context ~self:pif = false || management_interface then begin
-			Xapi_network_attach_helpers.assert_no_slave ~__context pif;
-			debug "Trying to attach PIF: %s" uuid;
-			Nm.bring_pif_up ~__context ~management_interface pif
+				Xapi_network_attach_helpers.assert_no_slave ~__context pif;
+				debug "Trying to attach PIF: %s" uuid;
+				Nm.bring_pif_up ~__context ~management_interface pif
+			end
 		end else
 			if management_interface then
 				info "PIF %s is the management interface, but it is not managed by xapi. \
