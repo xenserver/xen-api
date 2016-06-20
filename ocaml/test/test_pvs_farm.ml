@@ -67,6 +67,104 @@ let test_forget_running_proxy_and_server () =
 		~args:[Ref.string_of pvs_proxy]
 		(fun () -> Xapi_pvs_farm.forget ~__context ~self:pvs_farm)
 
+let test_add_local_sr () =
+	let module XF = Xapi_pvs_farm in
+	let module DF = Db.PVS_farm  in
+	let __context = make_test_database () in
+	let farm      = XF.introduce ~__context ~name in
+	let sr1       = make_sr ~__context ~shared:false () in
+	let sr2       = make_sr ~__context ~shared:false () in
+	let cache ()  = DF.get_cache_storage ~__context ~self:farm in
+		( XF.add_cache_storage ~__context ~self:farm ~value:sr1
+		; XF.add_cache_storage ~__context ~self:farm ~value:sr2
+		; assert_equal true (List.mem sr1 @@ cache ())
+		; assert_equal true (List.mem sr2 @@ cache ())
+		)
+
+let test_add_shared_sr () =
+	let module XF = Xapi_pvs_farm in
+	let module DF = Db.PVS_farm  in
+	let __context = make_test_database () in
+	let farm      = XF.introduce ~__context ~name in
+	let sr1       = make_sr ~__context ~shared:true () in
+	let cache ()  = DF.get_cache_storage ~__context ~self:farm in
+		( XF.add_cache_storage ~__context ~self:farm ~value:sr1
+		; assert_equal true (List.mem sr1 @@ cache ())
+		)
+
+let test_add_shared_sr () =
+	let module XF = Xapi_pvs_farm in
+	let module DF = Db.PVS_farm  in
+	let __context = make_test_database () in
+	let farm      = XF.introduce ~__context ~name in
+	let sr1       = make_sr ~__context ~shared:true () in
+	let cache ()  = DF.get_cache_storage ~__context ~self:farm in
+		( XF.add_cache_storage ~__context ~self:farm ~value:sr1
+		; assert_equal true (List.mem sr1 @@ cache ())
+		)
+
+let test_add_mixed_sr_1 () =
+	let module XF = Xapi_pvs_farm in
+	let module DF = Db.PVS_farm  in
+	let __context = make_test_database () in
+	let farm      = XF.introduce ~__context ~name in
+	let sr1       = make_sr ~__context ~shared:true  () in
+	let sr2       = make_sr ~__context ~shared:false () in
+	( XF.add_cache_storage ~__context ~self:farm ~value:sr1
+	; assert_raises_api_error Api_errors.operation_not_allowed
+		(fun () -> XF.add_cache_storage ~__context ~self:farm ~value:sr2)
+	)
+
+let test_add_mixed_sr_2 () =
+	let module XF = Xapi_pvs_farm in
+	let module DF = Db.PVS_farm  in
+	let __context = make_test_database () in
+	let farm      = XF.introduce ~__context ~name in
+	let sr1       = make_sr ~__context ~shared:false  () in
+	let sr2       = make_sr ~__context ~shared:true () in
+	( XF.add_cache_storage ~__context ~self:farm ~value:sr1
+	; assert_raises_api_error Api_errors.operation_not_allowed
+		(fun () -> XF.add_cache_storage ~__context ~self:farm ~value:sr2)
+	)
+
+let test_remove_local_sr () =
+	let module XF = Xapi_pvs_farm in
+	let module DF = Db.PVS_farm  in
+	let __context = make_test_database () in
+	let farm      = XF.introduce ~__context ~name in
+	let sr1       = make_sr ~__context ~shared:false () in
+	let sr2       = make_sr ~__context ~shared:false () in
+	let cache ()  = DF.get_cache_storage ~__context ~self:farm in
+		( XF.add_cache_storage ~__context ~self:farm ~value:sr1
+		; XF.add_cache_storage ~__context ~self:farm ~value:sr2
+		; assert_equal true (List.mem sr1 @@ cache ())
+		; assert_equal true (List.mem sr2 @@ cache ())
+		; XF.remove_cache_storage ~__context ~self:farm ~value:sr1
+		; assert_equal true (List.mem sr2 @@ cache ())
+		; XF.remove_cache_storage ~__context ~self:farm ~value:sr2
+		; assert_equal [] (cache ())
+		; assert_raises_api_error Api_errors.operation_not_allowed
+				(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr2)
+		; assert_raises_api_error Api_errors.operation_not_allowed
+				(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
+		)
+
+let test_remove_shared_sr () =
+	let module XF = Xapi_pvs_farm in
+	let module DF = Db.PVS_farm  in
+	let __context = make_test_database () in
+	let farm      = XF.introduce ~__context ~name in
+	let sr1       = make_sr ~__context ~shared:true () in
+	let cache ()  = DF.get_cache_storage ~__context ~self:farm in
+		( XF.add_cache_storage ~__context ~self:farm ~value:sr1
+		; assert_equal true (List.mem sr1 @@ cache ())
+		; XF.remove_cache_storage ~__context ~self:farm ~value:sr1
+		; assert_equal [] (cache ())
+		; assert_raises_api_error Api_errors.operation_not_allowed
+				(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
+		)
+
+
 let test =
 	"test_pvs_farm" >:::
 		[
@@ -77,4 +175,12 @@ let test =
 			"test_forget_server" >:: test_forget_server;
 			"test_forget_running_proxy_and_server" >::
 				test_forget_running_proxy_and_server;
+
+			"test_add_local_sr"     >:: test_add_local_sr;
+			"test_add_shared_sr"    >:: test_add_shared_sr;
+			"test_add_mixed_sr_1"   >:: test_add_mixed_sr_1;
+			"test_add_mixed_sr_2"   >:: test_add_mixed_sr_2;
+			"test_remove_local_sr"  >:: test_remove_local_sr;
+			"test_remove_shared_sr" >:: test_remove_shared_sr;
+
 		]
