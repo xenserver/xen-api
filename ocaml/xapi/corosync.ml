@@ -23,7 +23,9 @@ let dlm = "dlm.service"
 
 let write_config ~__context =
 	let cluster_name =
-		Db.Pool.get_uuid ~__context ~self:(Helpers.get_pool ~__context)
+		String.sub
+			(Db.Pool.get_uuid ~__context ~self:(Helpers.get_pool ~__context))
+			0 8
 	in
 	let addresses =
 		Db.Host.get_all_records ~__context
