@@ -813,6 +813,27 @@ let cancel_tasks ~__context ~ops ~all_tasks_in_db (* all tasks in database *) ~t
     Currently this just means "CD" but might change in future? *)
 let is_removable ~__context ~vbd = Db.VBD.get_type ~__context ~self:vbd = `CD
 
+(* Port checks. *)
+let is_valid_tcp_udp_port ~port =
+	port >= 1 && port <= 65535
+
+let assert_is_valid_tcp_udp_port ~port ~name =
+	if is_valid_tcp_udp_port ~port then ()
+	else raise Api_errors.(Server_error (value_not_supported, [
+		name; string_of_int port; "Port out of range";
+	]))
+
+let assert_is_valid_tcp_udp_port_range
+		~first_port ~first_name
+		~last_port ~last_name =
+	assert_is_valid_tcp_udp_port ~port:first_port ~name:first_name;
+	assert_is_valid_tcp_udp_port ~port:last_port ~name:last_name;
+	if last_port < first_port
+	then raise Api_errors.(Server_error (value_not_supported ,[
+		last_name; string_of_int last_port;
+		Printf.sprintf "%s smaller than %s" last_name first_name;
+	]))
+
 (* IP address and CIDR checks *)
 
 let is_valid_ip kind address =

@@ -14,13 +14,26 @@
 
 (** Implementation of PVS Server *)
 
+open Listext
+
 module D = Debug.Make(struct let name = "xapi_pvs_server" end)
 
-let not_implemented x =
-	raise (Api_errors.Server_error (Api_errors.not_implemented, [ x ]))
-
 let introduce ~__context ~addresses ~first_port ~last_port ~farm =
-	not_implemented "PVS_server.introduce"
+	List.iter
+		(fun address -> Helpers.assert_is_valid_ip `ipv4 "addresses" address)
+		addresses;
+	Helpers.assert_is_valid_tcp_udp_port_range
+		~first_port:(Int64.to_int first_port) ~first_name:"first_port"
+		~last_port:(Int64.to_int last_port) ~last_name:"last_port";
+	if not (Db.is_valid_ref __context farm)
+	then raise Api_errors.(Server_error (invalid_value ,[
+		"farm"; Ref.string_of farm
+	]));
+	let pvs_server = Ref.make () in
+	let uuid = Uuidm.to_string (Uuidm.create `V4) in
+	Db.PVS_server.create ~__context
+		~ref:pvs_server ~uuid ~addresses:(List.setify addresses)
+		~first_port ~last_port ~farm;
+	pvs_server
 
-let forget ~__context ~self =
-	not_implemented "PVS_server.forget"
+let forget ~__context ~self = Db.PVS_server.destroy ~__context ~self
