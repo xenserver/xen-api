@@ -513,3 +513,7 @@ let sr_does_not_support_migration = "SR_DOES_NOT_SUPPORT_MIGRATION"
 let unimplemented_in_sm_backend = "UNIMPLEMENTED_IN_SM_BACKEND"
 
 let vm_call_plugin_rate_limit = "VM_CALL_PLUGIN_RATE_LIMIT"
+
+(* PVS *)
+let pvs_farm_contains_running_proxies = "PVS_FARM_CONTAINS_RUNNING_PROXIES"
+let pvs_farm_contains_servers = "PVS_FARM_CONTAINS_SERVERS"

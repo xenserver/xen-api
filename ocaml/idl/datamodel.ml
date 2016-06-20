@@ -1340,7 +1340,13 @@ let _ =
 		~doc:"The VM cannot be imported unforced because it is either the same version or an older version of an existing VM." ();
 
 	error Api_errors.vm_call_plugin_rate_limit ["VM"; "interval"; "wait"]
-		~doc:"There is a minimal interval required between consecutive plugin calls made on the same VM, please wait before retry." ()
+		~doc:"There is a minimal interval required between consecutive plugin calls made on the same VM, please wait before retry." ();
+
+	(* PVS errors *)
+	error Api_errors.pvs_farm_contains_running_proxies ["proxies"]
+		~doc:"The PVS farm contains running proxies and cannot be forgotten." ();
+	error Api_errors.pvs_farm_contains_servers ["servers"]
+		~doc:"The PVS farm contains servers and cannot be forgotten." ()
 
 
 let _ =
@@ -8668,6 +8674,10 @@ module PVS_farm = struct
 		~doc:"Remove a farm's meta data"
 		~params:
 		[ Ref _pvs_farm, "self", "this PVS farm"
+		]
+		~errs:[
+			Api_errors.pvs_farm_contains_running_proxies;
+			Api_errors.pvs_farm_contains_servers;
 		]
 		~lifecycle
 		~allowed_roles:_R_POOL_OP
