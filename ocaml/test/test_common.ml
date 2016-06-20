@@ -277,3 +277,21 @@ let make_vgpu_type ~__context ?(ref=Ref.make ()) ?(uuid=make_uuid ())
 		~framebuffer_size ~max_heads ~max_resolution_x ~max_resolution_y ~size
 		~internal_config ~implementation ~identifier ~experimental;
 	ref
+
+let make_pvs_farm ~__context ?(ref=Ref.make ()) ?(uuid=make_uuid ())
+		?(name="") ?(cache_storage=[]) () =
+	Db.PVS_farm.create ~__context ~ref ~uuid ~name ~cache_storage;
+	ref
+
+let make_pvs_proxy ~__context ?(ref=Ref.make ()) ?(uuid=make_uuid ())
+		?(farm=Ref.null) ?(vIF=Ref.null) ?(prepopulate=false)
+		?(currently_attached=false) () =
+	Db.PVS_proxy.create ~__context
+		~ref ~uuid ~farm ~vIF ~prepopulate ~currently_attached;
+	ref
+
+let make_pvs_server ~__context ?(ref=Ref.make ()) ?(uuid=make_uuid ())
+		?(addresses=[]) ?(first_port=1L) ?(last_port=65535L) ?(farm=Ref.null) () =
+	Db.PVS_server.create ~__context
+		~addresses ~ref ~uuid ~first_port ~last_port ~farm;
+	ref
