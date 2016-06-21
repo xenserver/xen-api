@@ -68,11 +68,8 @@ let cream_release_schema_minor_vsn = 73
 let indigo_release_schema_major_vsn = 5
 let indigo_release_schema_minor_vsn = 74
 
-let pool_health_check_release_schema_major_vsn = 5
-let pool_health_check_release_schema_minor_vsn = 75
-
 let cream_tls_1_2_release_schema_major_vsn = 5
-let cream_tls_1_2_release_schema_minor_vsn = 76
+let cream_tls_1_2_release_schema_minor_vsn = 75
 
 (* the schema vsn of the last release: used to determine whether we can upgrade or not.. *)
 let last_release_schema_major_vsn = cream_release_schema_major_vsn
