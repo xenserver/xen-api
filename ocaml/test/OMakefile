@@ -62,6 +62,7 @@ OCAML_OBJS = \
 	test_daily_license_check \
 	test_dbsync_master \
 	test_pvs_farm \
+	test_pvs_proxy \
 	test_pvs_server \
 
 OCamlProgram(suite, suite $(OCAML_OBJS) )
