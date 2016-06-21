@@ -52,6 +52,7 @@ let base_suite =
 			Test_daily_license_check.test;
 			Test_dbsync_master.test;
 			Test_pvs_farm.test;
+			Test_pvs_proxy.test;
 			Test_pvs_server.test;
 		]
 
