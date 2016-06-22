@@ -1346,24 +1346,20 @@ let _ =
 	error Api_errors.pvs_farm_contains_running_proxies ["proxies"]
 		~doc:"The PVS farm contains running proxies and cannot be forgotten." ();
 	error Api_errors.pvs_farm_contains_servers ["servers"]
-    ~doc:"The PVS farm contains servers and cannot be forgotten."
-    ();
+		~doc:"The PVS farm contains servers and cannot be forgotten."
+		();
 
-	error Api_errors.pvs_farm_cant_mix_shared_and_local_srs ["SRs"]
-		~doc: "A PVS farm can either can either use a single shared cache or multiple non-shared caches, but not both."
-    ();
+	error Api_errors.pvs_farm_sr_already_added ["SR"]
+		~doc:"Trying to add a cache SR that is already associated with the farm"
+		();
 
-	error Api_errors.pvs_farm_host_already_providing_cache ["SR"]
-		~doc:"Trying to add cache from a host that already provides a cache."
-    ();
-
-	error Api_errors.pvs_farm_sr_is_unknown ["SR"]
-		~doc:"The provided SR is currently not use as a cache."
-    ();
+	error Api_errors.pvs_farm_sr_unknown_to_farm ["SR"]
+		~doc:"The SR is currently not used as a chache and unknown to the farm."
+		();
 
 	error Api_errors.pvs_farm_sr_is_in_use ["SR"]
-		~doc:"The SR is in use and cannot be removed."
-    ()
+		~doc:"The SR is in use by the farm and cannot be removed."
+		()
 
 
 let _ =

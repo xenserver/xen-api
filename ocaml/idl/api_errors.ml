@@ -517,10 +517,7 @@ let vm_call_plugin_rate_limit = "VM_CALL_PLUGIN_RATE_LIMIT"
 (* PVS *)
 let pvs_farm_contains_running_proxies = "PVS_FARM_CONTAINS_RUNNING_PROXIES"
 let pvs_farm_contains_servers = "PVS_FARM_CONTAINS_SERVERS"
+let pvs_farm_sr_already_added = "PVS_FARM_SR_ALREADY_ADDED"
+let pvs_farm_sr_is_in_use = "PVS_FARM_SR_IS_IN_USE"
+let pvs_farm_sr_unknown_to_farm = "PVS_FARM_SR_UNKNOWN_TO_FARM"
 
-let pvs_farm_cant_mix_shared_and_local_srs =
-  "PVS_FARM_CANT_MIX_SHARED_AND_LOCAL_SRS"
-let pvs_farm_host_already_providing_cache =
-  "PVS_FARM_HOST_ALREADY_PROVIDING_CACHE"
-let pvs_farm_sr_is_unknown = "PVS_FARM_SR_IS_UNKNOWN"
-let pvs_farm_sr_is_in_use =  "PVS_FARM_SR_IS_IN_USE"

@@ -59,84 +59,27 @@ let set_name ~__context ~self ~value =
 	else
 		Db.PVS_farm.set_name ~__context ~self ~value
 
-(** [disjoint] is [true] if two lists don't share at least one element *)
-let disjoint xs ys =
-	List.for_all (fun x -> not @@ List.mem x ys) xs
-
-(** [shared srs] is [true] if [srs] contains a single shared SR and
- *  false otherwise.
- *)
-let shared ~__context = function
-	| [sr]	-> Db.SR.get_shared ~__context ~self:sr
-	| _			-> false
-
-(** [sr_hosts] returns all hosts attached to a list of [srs]. The result
- *  may contain multiple entries for the same host if [srs] contains
- *  shared SRs *)
-let sr_hosts ~__context srs =
-	srs
-	|> List.map (fun sr  -> Db.SR.get_PBDs ~__context ~self:sr)
-	|> List.concat
-	|> List.map (fun pbd -> Db.PBD.get_host ~__context ~self:pbd)
-
-(** [clients] returns all hosts that use the farm as a client *)
-let clients ~__context ~self =
+(** [sr_is_in_use] is true, if the [sr] is currently in use. *)
+let sr_is_in_use ~__context ~self sr =
 	proxies ~__context ~self
-	|> List.map (fun proxy -> Db.PVS_proxy.get_VIF ~__context ~self:proxy)
-	|> List.map (fun vif -> Db.VIF.get_VM ~__context ~self:vif)
-	|> List.map (fun vm  -> Db.VM.get_resident_on ~__context ~self:vm)
+	|> List.map (fun px -> Db.PVS_proxy.get_cache_SR ~__context ~self:px)
+	|> List.mem sr
 
-(** add a shared SR *)
-let add_shared_cache_storage ~__context ~self ~value =
+(** [add_cache_storage] adds an SR for caching *)
+let add_cache_storage ~__context ~self ~value =
 	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
-	match cache with
-	| [] -> Db.PVS_farm.add_cache_storage ~__context ~self ~value
-	| _  -> api_error E.pvs_farm_cant_mix_shared_and_local_srs
-		(Ref.string_of value :: List.map Ref.string_of cache)
-
-(** add a local SR *)
-let add_local_cache_storage ~__context ~self ~value =
-	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
-	if shared ~__context cache then
-		api_error E.pvs_farm_cant_mix_shared_and_local_srs
-			(Ref.string_of value :: List.map Ref.string_of cache)
-	else if not @@ disjoint
-		(sr_hosts ~__context cache) (sr_hosts ~__context [value]) then
-			api_error E.pvs_farm_host_already_providing_cache
-				[Ref.string_of value]
+	if List.mem value cache then
+		api_error E.pvs_farm_sr_already_added [Ref.string_of value]
 	else
 		Db.PVS_farm.add_cache_storage ~__context ~self ~value
 
-let add_cache_storage ~__context ~self ~value =
-	if Db.SR.get_shared ~__context ~self:value
-	then add_shared_cache_storage ~__context ~self ~value
-	else add_local_cache_storage  ~__context ~self ~value
-
-(** remove a shared SR. This should be the only one *)
-let remove_shared_cache_storage ~__context ~self ~value =
-	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
-	let px    = proxies ~__context ~self in
-	if not @@ List.mem value cache then
-		api_error E.pvs_farm_sr_is_unknown [Ref.string_of value]
-	else if px <> [] then
-		api_error E.pvs_farm_contains_running_proxies (List.map Ref.string_of px)
-	else
-		Db.PVS_farm.remove_cache_storage ~__context ~self ~value
-
-(** remove a local SR *)
-let remove_local_cache_storage ~__context ~self ~value =
-	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
-	if not @@ List.mem value cache then
-		api_error E.pvs_farm_sr_is_unknown [Ref.string_of value]
-	else if not @@ disjoint
-			(clients ~__context ~self) (sr_hosts ~__context [value]) then
-		api_error E.pvs_farm_sr_is_in_use [Ref.string_of value]
-	else
-		Db.PVS_farm.remove_cache_storage ~__context ~self ~value
-
+(** [remove_cache_storage] remove an SR unless it is used *)
 let remove_cache_storage ~__context ~self ~value =
-	if Db.SR.get_shared ~__context ~self:value
-	then remove_shared_cache_storage ~__context ~self ~value
-	else remove_local_cache_storage  ~__context ~self ~value
-
+	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
+	if sr_is_in_use ~__context ~self value then
+		api_error E.pvs_farm_sr_is_in_use [Ref.string_of value]
+	else if not @@ List.mem value cache then
+		api_error E.pvs_farm_sr_unknown_to_farm [Ref.string_of value]
+	else
+		Db.PVS_farm.remove_cache_storage ~__context ~self ~value
 
