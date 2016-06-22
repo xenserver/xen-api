@@ -18,7 +18,7 @@ open Datamodel_types
 (* IMPORTANT: Please bump schema vsn if you change/add/remove a _field_.
               You do not have to bump vsn if you change/add/remove a message *)
 let schema_major_vsn = 5
-let schema_minor_vsn = 103
+let schema_minor_vsn = 104
 
 (* Historical schema versions just in case this is useful later *)
 let rio_schema_major_vsn = 5
@@ -8918,6 +8918,10 @@ module PVS_proxy = struct
 		; field   ~qualifier:DynamicRO ~lifecycle
 		          ~ty:Bool "currently_attached" ~default_value:null_bool
 		          "true = VM is currently proxied"
+
+		; field   ~qualifier:DynamicRO ~lifecycle
+		          ~ty:(Ref _sr) "cache_SR" ~default_value:null_ref
+		          "SR used by this proxy"
 		]
 		~messages:
 		[ create
