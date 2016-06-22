@@ -136,20 +136,22 @@ let test_remove_local_sr () =
 	let farm      = XF.introduce ~__context ~name in
 	let sr1       = make_sr ~__context ~shared:false () in
 	let sr2       = make_sr ~__context ~shared:false () in
+	let sr3       = make_sr ~__context ~shared:false () in
 	let cache ()  = DF.get_cache_storage ~__context ~self:farm in
 		( XF.add_cache_storage ~__context ~self:farm ~value:sr1
 		; XF.add_cache_storage ~__context ~self:farm ~value:sr2
-		; assert_equal true (List.mem sr1 @@ cache ())
-		; assert_equal true (List.mem sr2 @@ cache ())
+		; assert_equal true  (List.mem sr1 @@ cache ())
+		; assert_equal true  (List.mem sr2 @@ cache ())
+		; assert_equal false (List.mem sr3 @@ cache ())
+		; assert_raises_api_error Api_errors.pvs_farm_sr_is_unknown
+			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr3)
 		; XF.remove_cache_storage ~__context ~self:farm ~value:sr1
 		; assert_equal true (List.mem sr2 @@ cache ())
 		; XF.remove_cache_storage ~__context ~self:farm ~value:sr2
 		; assert_equal [] (cache ())
-		; assert_raises_api_error
-			Api_errors.pvs_farm_sr_is_unknown
+		; assert_raises_api_error Api_errors.pvs_farm_sr_is_unknown
 			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr2)
-		; assert_raises_api_error
-			Api_errors.pvs_farm_sr_is_unknown
+		; assert_raises_api_error Api_errors.pvs_farm_sr_is_unknown
 			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
 		)
 
@@ -159,13 +161,15 @@ let test_remove_shared_sr () =
 	let __context = make_test_database () in
 	let farm      = XF.introduce ~__context ~name in
 	let sr1       = make_sr ~__context ~shared:true () in
+	let sr2       = make_sr ~__context ~shared:true () in
 	let cache ()  = DF.get_cache_storage ~__context ~self:farm in
 		( XF.add_cache_storage ~__context ~self:farm ~value:sr1
 		; assert_equal true (List.mem sr1 @@ cache ())
+		; assert_raises_api_error Api_errors.pvs_farm_sr_is_unknown
+			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr2)
 		; XF.remove_cache_storage ~__context ~self:farm ~value:sr1
 		; assert_equal [] (cache ())
-		; assert_raises_api_error
-			Api_errors.pvs_farm_sr_is_unknown
+		; assert_raises_api_error Api_errors.pvs_farm_sr_is_unknown
 			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
 		)
 
