@@ -111,7 +111,8 @@ let test_add_mixed_sr_1 () =
 	let sr1       = make_sr ~__context ~shared:true  () in
 	let sr2       = make_sr ~__context ~shared:false () in
 	( XF.add_cache_storage ~__context ~self:farm ~value:sr1
-	; assert_raises_api_error Api_errors.operation_not_allowed
+	; assert_raises_api_error
+		Api_errors.pvs_farm_cant_mix_shared_and_local_srs
 		(fun () -> XF.add_cache_storage ~__context ~self:farm ~value:sr2)
 	)
 
@@ -123,7 +124,8 @@ let test_add_mixed_sr_2 () =
 	let sr1       = make_sr ~__context ~shared:false  () in
 	let sr2       = make_sr ~__context ~shared:true () in
 	( XF.add_cache_storage ~__context ~self:farm ~value:sr1
-	; assert_raises_api_error Api_errors.operation_not_allowed
+	; assert_raises_api_error
+		Api_errors.pvs_farm_cant_mix_shared_and_local_srs
 		(fun () -> XF.add_cache_storage ~__context ~self:farm ~value:sr2)
 	)
 
@@ -143,10 +145,12 @@ let test_remove_local_sr () =
 		; assert_equal true (List.mem sr2 @@ cache ())
 		; XF.remove_cache_storage ~__context ~self:farm ~value:sr2
 		; assert_equal [] (cache ())
-		; assert_raises_api_error Api_errors.operation_not_allowed
-				(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr2)
-		; assert_raises_api_error Api_errors.operation_not_allowed
-				(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
+		; assert_raises_api_error
+			Api_errors.pvs_farm_sr_is_unknown
+			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr2)
+		; assert_raises_api_error
+			Api_errors.pvs_farm_sr_is_unknown
+			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
 		)
 
 let test_remove_shared_sr () =
@@ -160,8 +164,9 @@ let test_remove_shared_sr () =
 		; assert_equal true (List.mem sr1 @@ cache ())
 		; XF.remove_cache_storage ~__context ~self:farm ~value:sr1
 		; assert_equal [] (cache ())
-		; assert_raises_api_error Api_errors.operation_not_allowed
-				(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
+		; assert_raises_api_error
+			Api_errors.pvs_farm_sr_is_unknown
+			(fun () -> XF.remove_cache_storage ~__context ~self:farm ~value:sr1)
 		)
 
 

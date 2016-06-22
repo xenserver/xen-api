@@ -15,9 +15,9 @@
 (* This module implements methods for the PVS_farm class *)
 
 module D = Debug.Make(struct let name = "xapi_pvs_farm" end)
+module E = Api_errors
 
-let not_allowed x =
-	let open Api_errors in raise (Server_error (operation_not_allowed, [x]))
+let api_error msg xs = raise (E.Server_error (msg, xs))
 
 let introduce ~__context ~name =
 	let pvs_farm = Ref.make () in
@@ -52,8 +52,10 @@ let forget ~__context ~self =
 
 (** set the name of [self] *)
 let set_name ~__context ~self ~value =
-	if proxies ~__context ~self <> [] then
-		not_allowed "can't set a name while proxies are still active"
+	let px = proxies ~__context ~self in
+	if px <> [] then
+		api_error E.pvs_farm_contains_running_proxies
+			(List.map Ref.string_of px)
 	else
 		Db.PVS_farm.set_name ~__context ~self ~value
 
@@ -61,11 +63,16 @@ let set_name ~__context ~self ~value =
 let disjoint xs ys =
 	List.for_all (fun x -> not @@ List.mem x ys) xs
 
-(** [shared] is [true] if at least one [sr] in [srs] is shared *)
-let shared ~__context srs =
-	List.exists (fun sr -> Db.SR.get_shared ~__context ~self:sr) srs
+(** [shared srs] is [true] if [srs] contains a single shared SR and
+ *  false otherwise.
+ *)
+let shared ~__context = function
+	| [sr]	-> Db.SR.get_shared ~__context ~self:sr
+	| _			-> false
 
-(** [sr_hosts] returns all hosts attached to a list of [sr]s. *)
+(** [sr_hosts] returns all hosts attached to a list of [srs]. The result
+ *  may contain multiple entries for the same host if [srs] contains
+ *  shared SRs *)
 let sr_hosts ~__context srs =
 	srs
 	|> List.map (fun sr  -> Db.SR.get_PBDs ~__context ~self:sr)
@@ -83,51 +90,53 @@ let clients ~__context ~self =
 let add_shared_cache_storage ~__context ~self ~value =
 	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
 	match cache with
-	| []    -> Db.PVS_farm.add_cache_storage ~__context ~self ~value
-	| [_]   -> not_allowed "can't add a shared SR to an existing SR"
-	| _     -> not_allowed "can't add a shared SR to a existing SRs"
+	| [] -> Db.PVS_farm.add_cache_storage ~__context ~self ~value
+	| _  -> api_error E.pvs_farm_cant_mix_shared_and_local_srs
+		(Ref.string_of value :: List.map Ref.string_of cache)
 
-(* add a local SR *)
+(** add a local SR *)
 let add_local_cache_storage ~__context ~self ~value =
 	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
 	if shared ~__context cache then
-		not_allowed "can't add SR to a cache using shared storage"
+		api_error E.pvs_farm_cant_mix_shared_and_local_srs
+			(Ref.string_of value :: List.map Ref.string_of cache)
 	else if not @@ disjoint
-			(sr_hosts ~__context cache) (sr_hosts ~__context [value]) then
-		not_allowed "SR's host is already providing storage"
+		(sr_hosts ~__context cache) (sr_hosts ~__context [value]) then
+			api_error E.pvs_farm_host_already_providing_cache
+				[Ref.string_of value]
 	else
 		Db.PVS_farm.add_cache_storage ~__context ~self ~value
 
 let add_cache_storage ~__context ~self ~value =
-	match Db.SR.get_shared ~__context ~self:value with
-	| true  -> add_shared_cache_storage ~__context ~self ~value
-	| false -> add_local_cache_storage  ~__context ~self ~value
+	if Db.SR.get_shared ~__context ~self:value
+	then add_shared_cache_storage ~__context ~self ~value
+	else add_local_cache_storage  ~__context ~self ~value
 
 (** remove a shared SR. This should be the only one *)
 let remove_shared_cache_storage ~__context ~self ~value =
 	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
+	let px    = proxies ~__context ~self in
 	if not @@ List.mem value cache then
-		not_allowed "SR is not part of the farm's storage"
-	else if proxies ~__context ~self <> [] then
-		not_allowed "can't remove SR while proxies are still active"
+		api_error E.pvs_farm_sr_is_unknown [Ref.string_of value]
+	else if px <> [] then
+		api_error E.pvs_farm_contains_running_proxies (List.map Ref.string_of px)
 	else
-		assert (cache = [value]);
 		Db.PVS_farm.remove_cache_storage ~__context ~self ~value
 
 (** remove a local SR *)
 let remove_local_cache_storage ~__context ~self ~value =
 	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
 	if not @@ List.mem value cache then
-		not_allowed "SR is not part of the farm's storage"
+		api_error E.pvs_farm_sr_is_unknown [Ref.string_of value]
 	else if not @@ disjoint
 			(clients ~__context ~self) (sr_hosts ~__context [value]) then
-		not_allowed "SR's host is used by the farm - can't remove it"
+		api_error E.pvs_farm_sr_is_in_use [Ref.string_of value]
 	else
 		Db.PVS_farm.remove_cache_storage ~__context ~self ~value
 
 let remove_cache_storage ~__context ~self ~value =
-	match Db.SR.get_shared ~__context ~self:value with
-	| true  -> remove_shared_cache_storage ~__context ~self ~value
-	| false -> remove_local_cache_storage  ~__context ~self ~value
+	if Db.SR.get_shared ~__context ~self:value
+	then remove_shared_cache_storage ~__context ~self ~value
+	else remove_local_cache_storage  ~__context ~self ~value
 
 
