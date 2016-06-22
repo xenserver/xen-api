@@ -67,19 +67,21 @@ let sr_is_in_use ~__context ~self sr =
 
 (** [add_cache_storage] adds an SR for caching *)
 let add_cache_storage ~__context ~self ~value =
+	let str ref = Ref.string_of ref in
 	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
 	if List.mem value cache then
-		api_error E.pvs_farm_sr_already_added [Ref.string_of value]
+		api_error E.pvs_farm_sr_already_added [str self; str value]
 	else
 		Db.PVS_farm.add_cache_storage ~__context ~self ~value
 
 (** [remove_cache_storage] remove an SR unless it is used *)
 let remove_cache_storage ~__context ~self ~value =
 	let cache = Db.PVS_farm.get_cache_storage ~__context ~self in
-	if sr_is_in_use ~__context ~self value then
-		api_error E.pvs_farm_sr_is_in_use [Ref.string_of value]
-	else if not @@ List.mem value cache then
-		api_error E.pvs_farm_sr_unknown_to_farm [Ref.string_of value]
+	let str ref = Ref.string_of ref in
+	if not @@ List.mem value cache then
+		api_error E.sr_not_in_pvs_farm [str self; str value]
+	else if sr_is_in_use ~__context ~self value then
+		api_error E.pvs_farm_sr_is_in_use [str self; str value]
 	else
 		Db.PVS_farm.remove_cache_storage ~__context ~self ~value
 
