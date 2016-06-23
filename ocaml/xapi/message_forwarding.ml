@@ -907,12 +907,15 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 		(* Clear scheduled_to_be_resident_on for a VM and all its vGPUs. *)
 		let clear_scheduled_to_be_resident_on ~__context ~vm =
 			Db.VM.set_scheduled_to_be_resident_on ~__context ~self:vm ~value:Ref.null;
-			List.iter
-				(fun vgpu ->
-					Db.VGPU.set_resident_on ~__context
-						~self:vgpu
-						~value:Ref.null)
-				(Db.VM.get_VGPUs ~__context ~self:vm)
+			if (Db.VM.get_power_state ~__context ~self:vm) <> `Running
+			then begin
+				List.iter
+					(fun vgpu ->
+						Db.VGPU.set_resident_on ~__context
+							~self:vgpu
+							~value:Ref.null)
+					(Db.VM.get_VGPUs ~__context ~self:vm)
+			end
 
 		(* Used by VM.start and VM.resume to choose a host with enough resource and to
 		   'allocate_vm_to_host' (ie set the 'scheduled_to_be_resident_on' field) *)
