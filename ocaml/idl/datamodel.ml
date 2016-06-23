@@ -1344,7 +1344,7 @@ let _ =
 
 	(* PVS errors *)
 	error Api_errors.pvs_farm_contains_running_proxies ["proxies"]
-		~doc:"The PVS farm contains running proxies and cannot be forgotten." ();
+		~doc:"The PVS farm contains running proxies." ();
 
 	error Api_errors.pvs_farm_contains_servers ["servers"]
 		~doc:"The PVS farm contains servers and cannot be forgotten."
@@ -1361,7 +1361,6 @@ let _ =
 	error Api_errors.pvs_farm_sr_is_in_use ["farm"; "SR"]
 		~doc:"The SR is in use by the farm and cannot be removed."
 		()
-
 
 let _ =
     message (fst Api_messages.ha_pool_overcommitted) ~doc:"Pool has become overcommitted: it can no longer guarantee to restart protected VMs if the configured number of hosts fail." ();
