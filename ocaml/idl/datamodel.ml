@@ -1366,6 +1366,10 @@ let _ =
 
 	error Api_errors.pvs_farm_sr_is_in_use ["farm"; "SR"]
 		~doc:"The SR is in use by the farm and cannot be removed."
+		();
+
+	error Api_errors.pvs_farm_cant_set_name ["farm"]
+		~doc:"The name of the farm can't be set while proxies are active."
 		()
 
 let _ =
