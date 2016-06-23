@@ -1359,8 +1359,11 @@ let _ =
 
 	error Api_errors.pvs_farm_sr_is_in_use ["farm"; "SR"]
 		~doc:"The SR is in use by the farm and cannot be removed."
-		()
+		();
 
+	error Api_errors.pvs_farm_cant_set_name ["farm"]
+		~doc:"The name of the farm can't be set while proxies are active."
+		()
 
 let _ =
     message (fst Api_messages.ha_pool_overcommitted) ~doc:"Pool has become overcommitted: it can no longer guarantee to restart protected VMs if the configured number of hosts fail." ();
