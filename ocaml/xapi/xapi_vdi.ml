@@ -291,7 +291,8 @@ let create ~__context ~name_label ~name_description
         | `suspend -> "suspend"
         | `system -> "system"
         | `user -> "user"
-        | `rrd -> "rrd" in
+        | `rrd -> "rrd"
+        | `pvs_cache -> "pvs_cache" in
 
     let open Storage_access in
     let task = Context.get_task_id __context in

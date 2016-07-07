@@ -361,6 +361,7 @@ let string_to_vdi_type x = match (String.lowercase x) with
   | "metadata" -> Some `metadata
   | "redo log" -> Some `redo_log
   | "rrd" -> Some `rrd
+  | "pvs_cache" -> Some `pvs_cache
   | _ -> None
 
 let vdi_type_to_string t =
@@ -374,6 +375,7 @@ let vdi_type_to_string t =
   | `metadata -> "Metadata"
   | `redo_log -> "Redo log"
   | `rrd -> "rrd"
+  | `pvs_cache -> "PVS cache"
 
 let ip_configuration_mode_to_string = function
   | `None -> "None"
