@@ -15,7 +15,13 @@
 (* This module implements methods for the PVS_farm class *)
 
 module D = Debug.Make(struct let name = "xapi_pvs_farm" end)
+open D
 module E = Api_errors
+
+open Listext
+
+let proxy_port_name bridge =
+	"pvs-" ^ bridge
 
 let api_error msg xs = raise (E.Server_error (msg, xs))
 
@@ -35,6 +41,90 @@ let proxies ~__context ~self =
 				((Eq (Field "farm", Literal (Ref.string_of self)))
 				,(Eq (Field "currently_attached", Literal "true"))
 				))
+
+let metadata_of_farm ~__context ~self ~vdi ~proxies =
+	let open Network_interface in
+	let farm_rc = Db.PVS_farm.get_record ~__context ~self in
+	let servers =
+		List.map (fun self ->
+			let rc = Db.PVS_server.get_record ~__context ~self in
+			PVS_proxy.Server.{
+				uuid = rc.API.pVS_server_uuid;
+				addresses = List.map Unix.inet_addr_of_string rc.API.pVS_server_addresses;
+				first_port = Int64.to_int rc.API.pVS_server_first_port;
+				last_port = Int64.to_int rc.API.pVS_server_last_port;
+			}
+		) farm_rc.API.pVS_farm_servers
+	in
+	let clients =
+		List.map (fun (vif, proxy) ->
+			let rc = Db.VIF.get_record ~__context ~self:vif in
+			let prepopulate = Db.PVS_proxy.get_prepopulate ~__context ~self:proxy in
+			PVS_proxy.Client.{
+				uuid = rc.API.vIF_uuid;
+				mac = rc.API.vIF_MAC;
+				interface = proxy_port_name (Db.Network.get_bridge ~__context ~self:rc.API.vIF_network);
+				prepopulate;
+			}
+		) proxies
+	in
+	let vdi = Db.VDI.get_uuid ~__context ~self:vdi in
+	PVS_proxy.{
+		farm_uuid = farm_rc.API.pVS_farm_uuid;
+		farm_name = farm_rc.API.pVS_farm_name;
+		servers;
+		clients;
+		vdi;
+	}
+
+let update_farm_on_localhost ~__context ~self ~vdi ?(starting_proxies=[]) ?(stopping_proxies=[]) () =
+	debug "Updating PVS farm %s. Starting proxies: [%s]. Stopping proxies: [%s]"
+		(Ref.string_of self)
+		(String.concat ", " (List.map (fun (_, p) -> Ref.string_of p) starting_proxies))
+		(String.concat ", " (List.map (fun (_, p) -> Ref.string_of p) stopping_proxies));
+
+	let open Network_interface.PVS_proxy in
+	let dbg = Context.string_of_task __context in
+
+	(* Ensure that OVS ports for the proxy daemon exist for starting proxies *)
+	List.iter
+		(fun (vif, _) ->
+			let network = Db.VIF.get_network ~__context ~self:vif in
+			let bridge = Db.Network.get_bridge ~__context ~self:network in
+			let port_name = proxy_port_name bridge in
+			Network.Net.Bridge.add_port dbg ~bridge ~name:port_name ~kind:Network_interface.PVS_proxy ~interfaces:[] ()
+		)
+		starting_proxies;
+
+	let running_proxies = proxies ~__context ~self in
+	let localhost = Helpers.get_localhost ~__context in
+	let local_running_proxies = List.filter_map (fun proxy ->
+		let vif = Db.PVS_proxy.get_VIF ~__context ~self:proxy in
+		let vm = Db.VIF.get_VM ~__context ~self:vif in
+		if Db.VM.get_resident_on ~__context ~self:vm = localhost then
+			Some (vif, proxy)
+		else
+			None
+	) running_proxies in
+	let proxies = starting_proxies @ (List.set_difference local_running_proxies stopping_proxies) in
+	let proxy_config = metadata_of_farm ~__context ~self ~vdi ~proxies in
+	if proxy_config.clients <> [] then
+		Network.Net.PVS_proxy.configure_farm dbg proxy_config
+	else
+		let uuid = Db.PVS_farm.get_uuid ~__context ~self in
+		Network.Net.PVS_proxy.remove_farm dbg uuid;
+
+	(* Ensure that OVS ports for the proxy daemon are removed if they are no longer used *)
+	List.iter
+		(fun (vif, _) ->
+			let network = Db.VIF.get_network ~__context ~self:vif in
+			let bridge = Db.Network.get_bridge ~__context ~self:network in
+			let port_name = proxy_port_name bridge in
+			let active_ports = List.map (fun client -> client.Client.interface) proxy_config.clients in
+			if not (List.mem port_name active_ports) then
+				Network.Net.Bridge.remove_port dbg ~bridge ~name:port_name
+		)
+		stopping_proxies
 
 let forget ~__context ~self =
 	let open Db_filter_types in

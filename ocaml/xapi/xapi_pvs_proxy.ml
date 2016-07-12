@@ -15,37 +15,47 @@
 (* This module implements methods for the PVS_proxy class *)
 
 module D = Debug.Make(struct let name = "xapi_pvs_proxy" end)
+open D
 
 let not_implemented x =
   raise (Api_errors.Server_error (Api_errors.not_implemented, [ x ]))
 
-let proxy_port_name bridge =
-	"pvs-" ^ bridge
-
 let start ~__context vif proxy =
 	if not (Db.PVS_proxy.get_currently_attached ~__context ~self:proxy) then begin
 		try
-			Xapi_pvs_cache.on_proxy_start ~__context
-				~host:(Helpers.get_localhost ~__context)
-				~farm:(Db.PVS_proxy.get_farm ~__context ~self:proxy);
-			let dbg = Context.string_of_task __context in
-			let network = Db.VIF.get_network ~__context ~self:vif in
-			let bridge = Db.Network.get_bridge ~__context ~self:network in
-			let name = proxy_port_name bridge in
-			Network.Net.Bridge.add_port dbg ~bridge ~name ~kind:Network_interface.PVS_proxy ~interfaces:[] ();
-			Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:true
-		with Xapi_pvs_cache.No_cache_sr_available ->
-			D.warn "No PVS cache SR available - starting with proxy unattached"
+			let host = Helpers.get_localhost ~__context in
+			let farm = Db.PVS_proxy.get_farm ~__context ~self:proxy in
+			let sr, vdi = Xapi_pvs_cache.find_or_create_cache_vdi ~__context ~host ~farm in
+			Xapi_pvs_farm.update_farm_on_localhost ~__context ~self:farm ~vdi ~starting_proxies:[vif, proxy] ();
+			Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:true;
+			Db.PVS_proxy.set_cache_SR ~__context ~self:proxy ~value:sr
+		with e ->
+			let reason =
+				match e with
+				| Xapi_pvs_cache.No_cache_sr_available -> "no PVS cache SR available"
+				| Network_interface.PVS_proxy_connection_error -> "unable to connect to PVS proxy daemon"
+				| _ -> Printf.sprintf "unknown error (%s)" (Printexc.to_string e)
+			in
+			warn "Unable to enable PVS proxy for VIF %s: %s. Continuing with proxy unattached." (Ref.string_of vif) reason
 	end
 
 let stop ~__context vif proxy =
 	if Db.PVS_proxy.get_currently_attached ~__context ~self:proxy then begin
-		let dbg = Context.string_of_task __context in
-		let network = Db.VIF.get_network ~__context ~self:vif in
-		let bridge = Db.Network.get_bridge ~__context ~self:network in
-		let name = proxy_port_name bridge in
-		Network.Net.Bridge.remove_port dbg ~bridge ~name;
-		Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:false
+		try
+			let farm = Db.PVS_proxy.get_farm ~__context ~self:proxy in
+			let sr = Db.PVS_proxy.get_cache_SR ~__context ~self:proxy in
+			let vdi = Xapi_pvs_cache.find_cache_vdi ~__context ~sr in
+			Xapi_pvs_farm.update_farm_on_localhost ~__context ~self:farm ~vdi ~stopping_proxies:[vif, proxy] ();
+			Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:false;
+			Db.PVS_proxy.set_cache_SR ~__context ~self:proxy ~value:Ref.null
+		with e ->
+			let reason =
+				match e with
+				| Xapi_pvs_cache.No_cache_vdi_present -> "no PVS cache VDI found"
+				| Network_interface.PVS_proxy_connection_error -> "unable to connect to PVS proxy daemon"
+				| _ -> Printf.sprintf "unknown error (%s)" (Printexc.to_string e)
+			in
+			error "Unable to disable PVS proxy for VIF %s: %s." (Ref.string_of vif) reason
 	end
 
 let find_proxy_for_vif ~__context ~vif =
@@ -65,6 +75,29 @@ let maybe_stop_proxy_for_vif ~__context ~vif =
 	Opt.iter
 		(stop ~__context vif)
 		(find_proxy_for_vif ~__context ~vif)
+
+let make_xenstore_keys_for_vif ~__context ~vif =
+	match find_proxy_for_vif ~__context ~vif with
+	| None -> []
+	| Some proxy ->
+		let network = Db.VIF.get_network ~__context ~self:vif in
+		let bridge = Db.Network.get_bridge ~__context ~self:network in
+		let farm = Db.PVS_proxy.get_farm ~__context ~self:proxy in
+		let servers = Db.PVS_farm.get_servers ~__context ~self:farm in
+		let server_keys =
+			List.mapi (fun i server ->
+				let open Printf in
+				let rc = Db.PVS_server.get_record ~__context ~self:server in
+				[
+					sprintf "pvs-server-%d-addresses" i, String.concat "," rc.API.pVS_server_addresses;
+					sprintf "pvs-server-%d-ports" i, sprintf "%Ld-%Ld" rc.API.pVS_server_first_port rc.API.pVS_server_last_port;
+				]
+			) servers
+			|> List.flatten
+		in
+		("pvs-interface", Xapi_pvs_farm.proxy_port_name bridge) ::
+		("pvs-server-num", string_of_int (List.length servers)) ::
+		server_keys
 
 let create ~__context ~farm ~vIF ~prepopulate =
 	Helpers.assert_is_valid_ref ~__context ~name:"farm" ~ref:farm;

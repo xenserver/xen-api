@@ -13,6 +13,7 @@
  *)
 
 exception No_cache_sr_available
+exception No_cache_vdi_present
 
 (** Check the pool for PVS cache SRs which are
     a) visible to the specified host
@@ -37,8 +38,13 @@ val check_cache_availability :
 
 (** Ensure a cache VDI exists in an SR suitable for this host and PVS farm.
     If there is no suitable SR, raise [No_cache_sr_available]. *)
-val on_proxy_start :
-	__context:Context.t -> host:API.ref_host -> farm:API.ref_PVS_farm -> unit
+val find_or_create_cache_vdi :
+	__context:Context.t -> host:API.ref_host -> farm:API.ref_PVS_farm -> API.ref_SR * API.ref_VDI
+
+(** Find a cache VDI on the given SR.
+    If there is none, raise [No_cache_vdi_present]. *)
+val find_cache_vdi :
+	__context:Context.t -> sr:API.ref_SR -> API.ref_VDI
 
 (** Destroy all PVS cache VDIs in the specified SR. *)
 val on_sr_remove : __context:Context.t -> sr:API.ref_SR -> unit
