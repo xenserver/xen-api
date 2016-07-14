@@ -51,6 +51,7 @@ type feature =
 	| AD
 	| Ssl_legacy_switch
 	| Nested_virt
+	| PVS_proxy
 	with rpc
 
 type orientation = Positive | Negative
@@ -90,7 +91,11 @@ let keys_of_features =
 		Guest_ip_setting, ("restrict_guest_ip_setting", Negative, "GuestIP");
 		AD, ("restrict_ad", Negative, "AD");
 		Ssl_legacy_switch, ("restrict_ssl_legacy_switch", Negative, "Ssl_legacy_switch");
+<<<<<<< 5819186b44fb01a2e1465034c5aee0a34b2032e6
 		Nested_virt, ("restrict_nested_virt", Negative, "Nested_virt");
+=======
+		PVS_proxy, ("restrict_pvs_proxy", Negative, "PVS_proxy");
+>>>>>>> CP-17652: Add PVS_proxy feature flag
 	]
 
 let name_of_feature f =
