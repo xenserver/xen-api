@@ -42,7 +42,7 @@ module CreateToolsSR = Generic.Make(Generic.EncapsulateState(struct
 		let maybe_create_pbd sR device_config host =
 			Test_common.make_pbd ~__context ~sR ~device_config ~host ()
 		in
-		Test_common.make_localhost __context;
+		Test_common.make_localhost ~__context ();
 		List.iter (fun (name_label, name_description, other_config, is_tools_sr) ->
 			ignore (Test_common.make_sr ~__context ~name_label ~name_description ~other_config ~is_tools_sr ())
 		) srs;
