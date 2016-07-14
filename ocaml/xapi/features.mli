@@ -49,6 +49,7 @@ type feature =
 	| Xen_motion                   (** Enable XenMotion feature *)
 	| Guest_ip_setting             (** Enable use of Guest ip seting *)
 	| AD                           (** Enable use of Active Directory *)
+	| PVS_proxy                    (** Enable the use of PVS proxying. *)
 
 (** Convert RPC into {!feature}s *)
 val feature_of_rpc : Rpc.t -> feature

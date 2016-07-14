@@ -49,6 +49,7 @@ type feature =
 	| Xen_motion
 	| Guest_ip_setting
 	| AD
+	| PVS_proxy
 	with rpc
 
 type orientation = Positive | Negative
@@ -87,6 +88,7 @@ let keys_of_features =
 		Xen_motion, ("restrict_xen_motion", Negative, "XenMotion");
 		Guest_ip_setting, ("restrict_guest_ip_setting", Negative, "GuestIP");
 		AD, ("restrict_ad", Negative, "AD");
+		PVS_proxy, ("restrict_pvs_proxy", Negative, "PVS_proxy");
 	]
 
 let name_of_feature f =
