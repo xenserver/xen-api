@@ -52,6 +52,7 @@ type feature =
   | Ssl_legacy_switch
   | Nested_virt
   | Live_patching
+  | PVS_proxy
 with rpc
 
 type orientation = Positive | Negative
@@ -93,6 +94,7 @@ let keys_of_features =
     Ssl_legacy_switch, ("restrict_ssl_legacy_switch", Negative, "Ssl_legacy_switch");
     Nested_virt, ("restrict_nested_virt", Negative, "Nested_virt");
     Live_patching, ("restrict_live_patching", Negative, "Live_patching");
+    PVS_proxy, ("restrict_pvs_proxy", Negative, "PVS_proxy");
   ]
 
 (* A list of features that must be considered "enabled" by `of_assoc_list`
