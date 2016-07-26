@@ -12,15 +12,12 @@
  * GNU Lesser General Public License for more details.
  *)
 
-val introduce : __context:Context.t -> name:string -> API.ref_PVS_farm
+val proxy_port_name : string -> string
+val get_running_proxies : __context:Context.t -> farm:API.ref_PVS_farm -> API.ref_PVS_proxy list
 
-val forget : __context:Context.t -> self:API.ref_PVS_farm -> unit
+val start_proxy : __context:Context.t -> API.ref_VIF -> API.ref_PVS_proxy -> unit
+val stop_proxy : __context:Context.t -> API.ref_VIF -> API.ref_PVS_proxy -> unit
 
-val set_name : __context:Context.t ->
-	self:API.ref_PVS_farm -> value:string -> unit
-
-val add_cache_storage : __context:Context.t ->
-	self:API.ref_PVS_farm -> value:API.ref_SR -> unit
-
-val remove_cache_storage : __context:Context.t ->
-	self:API.ref_PVS_farm -> value:API.ref_SR -> unit
+val find_proxy_for_vif : __context:Context.t -> vif:API.ref_VIF -> API.ref_PVS_proxy option
+val maybe_start_proxy_for_vif : __context:Context.t -> vif:API.ref_VIF -> unit
+val maybe_stop_proxy_for_vif : __context:Context.t -> vif:API.ref_VIF -> unit
