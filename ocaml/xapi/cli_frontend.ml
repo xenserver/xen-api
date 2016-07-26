@@ -905,6 +905,69 @@ let rec cmdtable_data : (string*cmd_spec) list =
 		flags=[];
 	};
 
+   "update-introduce",
+    {
+      reqd=["vdi-uuid"];
+      optn=[];
+      help="Introduce update VDI.";
+      implementation=No_fd Cli_operations.update_introduce;
+      flags=[];
+    };
+
+   "update-precheck",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Execute the precheck stage of the selected update on a host.";
+      implementation=No_fd Cli_operations.update_precheck;
+      flags=[Host_selectors];
+    };
+
+   "update-apply",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Apply the selected update to a host.";
+      implementation=No_fd Cli_operations.update_apply;
+      flags=[Host_selectors];
+    };
+
+   "update-pool-apply",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Apply the selected update to all hosts in the pool.";
+      implementation=No_fd Cli_operations.update_pool_apply;
+      flags=[];
+    };
+
+   "update-clean",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Removes the update's files from the server.";
+      implementation=No_fd Cli_operations.update_clean;
+      flags=[Host_selectors];
+    };
+
+   "update-pool-clean",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Removes the update's files from all hosts in the pool.";
+      implementation=No_fd Cli_operations.update_pool_clean;
+      flags=[];
+    };
+
+   "update-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Removes the update's files from all hosts in the pool, and removes the database entries.";
+      implementation=No_fd Cli_operations.update_destroy;
+      flags=[];
+    };
+
    "user-password-change",
     {
       reqd=["new"];
