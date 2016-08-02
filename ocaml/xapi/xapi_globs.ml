@@ -839,6 +839,8 @@ let gvt_g_whitelist = ref "/etc/gvt-g-whitelist"
  * should be set with disallow-unplug=true, during a PIF.scan. *)
 let non_managed_pifs = ref "/opt/xensource/libexec/bfs-interfaces"
 
+let xen_cmdline_script = ref "/opt/xensource/libexec/xen-cmdline"
+
 let sr_health_check_task_label = "SR Recovering"
 
 type xapi_globs_spec_ty = | Float of float ref | Int of int ref
@@ -1059,6 +1061,7 @@ module Resources = struct
 		"xe-toolstack-restart", xe_toolstack_restart, "Path to xe-toolstack-restart script";
 		"xsh", xsh, "Path to xsh binary";
 		"static-vdis", static_vdis, "Path to static-vdis script";
+		"xen-cmdline-script", xen_cmdline_script, "Path to xen-cmdline script";
 	]
 	let nonessential_executables = [
 		"startup-script-hook", startup_script_hook, "Executed during startup";
