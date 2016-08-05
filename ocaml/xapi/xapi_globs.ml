@@ -14,6 +14,7 @@
 
 (** A central location for settings related to xapi *)
 
+module String_plain = String (* For when we don't want the Xstringext version *)
 open Stringext
 open Printf
 
@@ -797,6 +798,10 @@ let xapi_globs_spec =
 	]
 
 let xapi_globs_conf = "/etc/xensource/xapi_globs.conf"
+let ciphersuites_good_outbound = ref (Some "")
+let _ = (ciphersuites_good_outbound := None)
+
+let ciphersuites_legacy_outbound = ref ""
 
 let read_external_config () =
 	let unknown_key k v = D.warn "Unknown key/value pairs: (%s, %s)" k v in
