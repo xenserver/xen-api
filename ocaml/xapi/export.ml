@@ -107,6 +107,18 @@ let rec update_table ~__context ~include_snapshots ~preserve_power_state ~includ
 				end)
 			vm.API.vM_VGPUs;
 
+		(* add all PVS proxies that have a VIF belonging to this VM, add their
+		 * PVS sites as well
+		 *)
+		Db.PVS_proxy.get_all_records ~__context
+		|> List.filter (fun (_,p)-> List.mem p.API.pVS_proxy_VIF vm.API.vM_VIFs)
+		|> List.iter
+			(fun (ref, proxy) ->
+				if Db.is_valid_ref __context ref then begin
+					add ref;
+					add proxy.API.pVS_proxy_site;
+				end);
+
 		(* If we need to include snapshots, update the table for VMs in the 'snapshots' field *)
 		if include_snapshots then
 			List.iter
@@ -328,7 +340,40 @@ let make_gpu_group table __context self =
 		snapshot = API.Legacy.To.gPU_group_t group
 	}
 
-let make_all ~with_snapshot_metadata ~preserve_power_state table __context = 
+let make_pvs_proxies table __context self =
+	debug "exporting PVS Proxy %s" (Ref.string_of self);
+	let lookup' ref = lookup table (Ref.string_of ref) in
+	let proxy = Db.PVS_proxy.get_record ~__context ~self in
+	let proxy =
+		{ proxy with
+		  API.pVS_proxy_site      = lookup' proxy.API.pVS_proxy_site
+		; API.pVS_proxy_VIF       = lookup' proxy.API.pVS_proxy_VIF
+		; API.pVS_proxy_cache_SR  = Ref.null (* don't export *)
+		; API.pVS_proxy_currently_attached = false (* default on dest *)
+		} in
+	{ cls      = Datamodel._pvs_proxy
+	; id       = Ref.string_of (lookup' self)
+	; snapshot = API.Legacy.To.pVS_proxy_t proxy
+	}
+
+let make_pvs_sites table __context self =
+	debug "exporting PVS Site %s" (Ref.string_of self);
+	let lookup'  ref  = lookup table (Ref.string_of ref) in
+	let filter'  refs = filter table (List.map Ref.string_of refs) in
+	let site = Db.PVS_site.get_record ~__context ~self in
+	let site =
+		{ site with
+		  API.pVS_site_cache_storage = [] (* don't export *)
+		; API.pVS_site_servers       = [] (* don't export *)
+		; API.pVS_site_proxies       = filter' site.API.pVS_site_proxies
+		} in
+	{ cls      = Datamodel._pvs_site
+	; id       = Ref.string_of (lookup' self)
+	; snapshot = API.Legacy.To.pVS_site_t site
+	}
+
+
+let make_all ~with_snapshot_metadata ~preserve_power_state table __context =
 	let filter table rs = List.filter (fun x -> lookup table (Ref.string_of x) <> Ref.null) rs in
 	let hosts = List.map (make_host table __context) (filter table (Db.Host.get_all ~__context)) in
 	let vms  = List.map (make_vm ~with_snapshot_metadata ~preserve_power_state table __context) (filter table (Db.VM.get_all ~__context)) in
@@ -341,7 +386,23 @@ let make_all ~with_snapshot_metadata ~preserve_power_state table __context =
 	let vgpu_types = List.map (make_vgpu_type table __context) (filter table (Db.VGPU_type.get_all ~__context)) in
 	let vgpus = List.map (make_vgpu ~preserve_power_state table __context) (filter table (Db.VGPU.get_all ~__context)) in
 	let gpu_groups = List.map (make_gpu_group table __context) (filter table (Db.GPU_group.get_all ~__context)) in
-	hosts @ vms @ gms @ vbds @ vifs @ nets @ vdis @ srs @ vgpu_types @ vgpus @ gpu_groups
+	let pvs_proxies = List.map (make_pvs_proxies table __context) (filter table (Db.PVS_proxy.get_all ~__context)) in
+	let pvs_sites   = List.map (make_pvs_sites table __context) (filter table (Db.PVS_site.get_all ~__context)) in
+	List.concat
+		[ hosts
+		; vms
+		; gms
+		; vbds
+		; vifs
+		; nets
+		; vdis
+		; srs
+		; vgpu_types
+		; vgpus
+		; gpu_groups
+		; pvs_proxies
+		; pvs_sites
+		]
 
 open Xapi_globs
 
