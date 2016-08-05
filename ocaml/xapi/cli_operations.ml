@@ -803,9 +803,9 @@ let gen_cmds rpc session_id =
 	; Client.DR_task.(mk get_all get_all_records_where get_by_uuid dr_task_record "drtask" [] [] rpc session_id)
 (*; Client.Alert.(mk get_all get_all_records_where get_by_uuid alert_record "alert" [] ["uuid";"message";"level";"timestamp";"system";"task"] rpc session_id)
 	*)
-	; Client.PVS_site.(mk get_all get_all_records_where get_by_uuid pvs_site_record "pvs-site" [] ["uuid";"name";"cache-storage";"server-uuids"] rpc session_id)
-	; Client.PVS_server.(mk get_all get_all_records_where get_by_uuid pvs_server_record "pvs-server" [] ["uuid"; "addresses"; "site-uuid"] rpc session_id)
-	; Client.PVS_proxy.(mk get_all get_all_records_where get_by_uuid pvs_proxy_record "pvs-proxy" [] ["uuid"; "vif-uuid" ;"site-uuid"; "currently-attached"; "prepopulate"; "cache-sr-uuid"] rpc session_id)
+	; Client.PVS_site.(mk get_all get_all_records_where get_by_uuid pvs_site_record "pvs-site" [] ["uuid"; "name"; "cache-storage"; "pvs-server-uuids"] rpc session_id)
+	; Client.PVS_server.(mk get_all get_all_records_where get_by_uuid pvs_server_record "pvs-server" [] ["uuid"; "addresses"; "pvs-site-uuid"] rpc session_id)
+	; Client.PVS_proxy.(mk get_all get_all_records_where get_by_uuid pvs_proxy_record "pvs-proxy" [] ["uuid"; "vif-uuid"; "pvs-site-uuid"; "currently-attached"; "prepopulate"; "cache-sr-uuid"] rpc session_id)
 	]
 
 (* NB, might want to put these back in at some point
@@ -2047,6 +2047,15 @@ let vm_memory_limits_set printer rpc session_id params =
 				Client.VM.set_memory_limits rpc session_id (vm.getref ())
 					static_min static_max dynamic_min dynamic_max)
 			params ["static-min"; "static-max"; "dynamic-min"; "dynamic-max"])
+
+let vm_memory_set printer rpc session_id params =
+	let value = Record_util.bytes_of_string "memory" (List.assoc "memory" params) in
+	ignore
+		(do_vm_op ~include_control_vms:true ~include_template_vms:true
+			printer rpc session_id
+			(fun vm ->
+				Client.VM.set_memory rpc session_id (vm.getref ()) value)
+			params ["memory"])
 
 let vm_memory_target_set printer rpc session_id params =
 	let target = Record_util.bytes_of_string "target"
@@ -4672,7 +4681,7 @@ module PVS_server = struct
 		let addresses  = List.assoc "addresses" params   |> String.split ',' in
 		let first_port = List.assoc "first-port" params  |> Int64.of_string in
 		let last_port  = List.assoc "last-port" params   |> Int64.of_string in
-		let site_uuid  = List.assoc "site-uuid" params in
+		let site_uuid  = List.assoc "pvs-site-uuid" params in
 		let site = Client.PVS_site.get_by_uuid
 			~rpc ~session_id ~uuid:site_uuid in
 		let ref = Client.PVS_server.introduce
@@ -4688,7 +4697,7 @@ end
 
 module PVS_proxy = struct
 	let create printer rpc session_id params =
-		let site_uuid  = List.assoc "site-uuid" params in
+		let site_uuid  = List.assoc "pvs-site-uuid" params in
 		let site = Client.PVS_site.get_by_uuid ~rpc ~session_id ~uuid:site_uuid in
 		let vif_uuid  = List.assoc "vif-uuid" params in
 		let vIF = Client.VIF.get_by_uuid ~rpc ~session_id ~uuid:vif_uuid in

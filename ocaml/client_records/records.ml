@@ -922,6 +922,8 @@ let vm_record rpc session_id vm =
 			make_field ~name:"has-vendor-device"
 				~get:(fun () -> string_of_bool (x ()).API.vM_has_vendor_device)
 				~set:(fun x -> Client.VM.set_has_vendor_device rpc session_id vm (safe_bool_of_string "has-vendor-device" x)) ();
+			make_field ~name:"requires-reboot"
+				~get:(fun () -> string_of_bool (x ()).API.vM_requires_reboot) ();
 		]}
 
 let host_crashdump_record rpc session_id host = 
@@ -1716,13 +1718,13 @@ let pvs_site_record rpc session_id pvs_site =
 					let sr = Client.SR.get_by_uuid rpc session_id sr_uuid in
 					Client.PVS_site.remove_cache_storage rpc session_id !_ref sr)
 				()
-			; make_field ~name:"server-uuids"
+			; make_field ~name:"pvs-server-uuids"
 				~get:(fun () -> (x ()).API.pVS_site_servers
 					|> List.map get_uuid_from_ref |> String.concat "; ")
 				~get_set:(fun () -> (x ()).API.pVS_site_servers
 					|> List.map get_uuid_from_ref)
 				()
-			; make_field ~name:"proxy-uuids"
+			; make_field ~name:"pvs-proxy-uuids"
 				~get:(fun () -> (x ()).API.pVS_site_proxies
 					|> List.map get_uuid_from_ref |> String.concat "; ")
 				~get_set:(fun () -> (x ()).API.pVS_site_proxies
@@ -1755,7 +1757,7 @@ let pvs_server_record rpc session_id pvs_site =
 			; make_field ~name:"last-port"
 				~get:(fun () -> (x ()).API.pVS_server_last_port |> Int64.to_string)
 				()
-			; make_field ~name:"site-uuid"
+			; make_field ~name:"pvs-site-uuid"
 				~get:(fun () -> (x ()).API.pVS_server_site |> get_uuid_from_ref)
 				()
 			]
@@ -1775,7 +1777,7 @@ let pvs_proxy_record rpc session_id pvs_site =
 			[ make_field ~name:"uuid"
 				~get:(fun () -> (x ()).API.pVS_proxy_uuid)
 				()
-			; make_field ~name:"site-uuid"
+			; make_field ~name:"pvs-site-uuid"
 				~get:(fun () -> (x ()).API.pVS_proxy_site |> get_uuid_from_ref)
 				()
 			; make_field ~name:"vif-uuid"
