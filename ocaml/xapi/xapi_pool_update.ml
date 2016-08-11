@@ -123,18 +123,6 @@ let introduce ~__context ~vdi =
   let update_info = load_update_info_from_xml ~__context vdi_name in
   create_update_record ~__context update_info
 
-let precheck ~__context ~self ~host =
-  let pool_update_name = Db.Pool_update.get_name_label ~__context ~self in
-  let host_name = Db.Host.get_name_label ~__context ~self:host in
-  debug "pool_update.precheck %s on %s" pool_update_name host_name;
-  ()
-
-let apply ~__context ~self ~host =
-  let pool_update_name = Db.Pool_update.get_name_label ~__context ~self in
-  let host_name = Db.Host.get_name_label ~__context ~self:host in
-  debug "pool_update.apply %s on %s" pool_update_name host_name;
-  ()
-
 let pool_apply ~__context ~self =
   let pool_update_name = Db.Pool_update.get_name_label ~__context ~self in
   debug "pool_update.pool_apply %s" pool_update_name;

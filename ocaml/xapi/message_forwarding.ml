@@ -2640,18 +2640,6 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 			info "Pool_update.introduce: vdi = '%s'" (vdi_uuid ~__context vdi);
 			Local.Pool_update.introduce ~__context ~vdi
 
-		let precheck ~__context ~self ~host =
-			info "Pool_update.precheck: pool update = '%s'; host = '%s'" (pool_update_uuid ~__context self) (host_uuid ~__context host);
-			let local_fn = Local.Pool_update.precheck ~self ~host in
-			do_op_on ~local_fn ~__context ~host
-				(fun session_id rpc -> Client.Pool_update.precheck rpc session_id self host)
-
-		let apply ~__context ~self ~host =
-			info "Pool_update.apply: pool update = '%s'; host = '%s'" (pool_update_uuid ~__context self) (host_uuid ~__context host);
-			let local_fn = Local.Pool_update.apply ~self ~host in
-			do_op_on ~local_fn ~__context ~host
-				(fun session_id rpc -> Client.Pool_update.apply rpc session_id self host)
-
 		let pool_apply ~__context ~self =
 			info "Pool_update.pool_apply: pool update = '%s'" (pool_update_uuid ~__context self);
 			Local.Pool_update.pool_apply ~__context ~self
