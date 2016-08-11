@@ -595,6 +595,31 @@ let create_or_get_pif_on_master __context rpc session_id (pif_ref, pif) : API.re
 
 	new_pif_ref
 
+let create_or_get_pvs_site_on_master __context rpc session_id (pvs_site_ref, pvs_site) : API.ref_PVS_site =
+	let my_site_name = pvs_site.API.pVS_site_name in
+	let new_pvs_site_ref =
+		let expr = "field \"name\"=\"" ^ my_site_name ^ "\"" in
+		match Client.PVS_site.get_all_records_where ~rpc ~session_id ~expr with
+		| [] ->
+			debug "Found no PVS site with name = '%s' on the master, so creating one." my_site_name;
+			let new_pvs_site = Client.PVS_site.introduce ~rpc ~session_id ~name:my_site_name in
+			(* Update PVS servers *)
+			let (_ : API.ref_PVS_server list) = List.map (fun pvs_server ->
+				let pvs_record = Db.PVS_server.get_record ~__context ~self:pvs_server in
+				Client.PVS_server.introduce ~rpc ~session_id
+					~addresses:pvs_record.API.pVS_server_addresses
+					~first_port:pvs_record.API.pVS_server_first_port
+					~last_port:pvs_record.API.pVS_server_last_port
+					~site:new_pvs_site
+				) (Db.PVS_site.get_servers ~__context ~self:pvs_site_ref) in
+			new_pvs_site
+		| (pvs_site, _) :: _ -> pvs_site
+	in
+
+	(* TODO: Update PVS site cache SR *)
+
+	new_pvs_site_ref
+
 let create_or_get_secret_on_master __context rpc session_id (secret_ref, secret) : API.ref_secret =
 	let my_uuid = secret.API.secret_uuid in
 	let my_value = secret.API.secret_value in
@@ -648,6 +673,11 @@ let update_non_vm_metadata ~__context ~rpc ~session_id =
 	) in
 	let (_ : API.ref_PIF option list) =
 		List.map (protect_exn (create_or_get_pif_on_master __context rpc session_id)) my_pifs in
+
+	(* update PVS sites *)
+	let my_pvs_sites = Db.PVS_site.get_all_records ~__context in
+	let (_ : API.ref_PVS_site option list) =
+		List.map (protect_exn (create_or_get_pvs_site_on_master __context rpc session_id)) my_pvs_sites in
 
 	(* update Secrets *)
 	let my_secrets = Db.Secret.get_all_records ~__context in
