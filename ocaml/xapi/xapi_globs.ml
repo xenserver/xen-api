@@ -639,6 +639,9 @@ let first_boot_dir = "/etc/firstboot.d/"
 let persist_xenopsd_md = "persist_xenopsd_md"
 let persist_xenopsd_md_root = Filename.concat "/var/lib/xcp" "xenopsd_md"
 
+(** {Host updates directory} *)
+let host_update_dir = "/var/update/"
+
 (** Dynamic configurations to be read whenever xapi (re)start *)
 
 let master_connection_reset_timeout = ref 120.
@@ -928,10 +931,15 @@ let reboot_required_hfxs = ref "/run/reboot-required.hfxs"
 
 (* Fingerprint of default patch key *)
 let citrix_patch_key = "NERDNTUzMDMwRUMwNDFFNDI4N0M4OEVCRUFEMzlGOTJEOEE5REUyNg=="
+(* Fingerprint of default update key *)
+let citrix_update_key = "NERDNTUzMDMwRUMwNDFFNDI4N0M4OEVCRUFEMzlGOTJEOEE5REUyNg=="
 (* Used only for testing hotfixes *)
 let test_patch_key = "RjgyNjVCRURDMzcxMjgzNkQ1NkJENjJERDQ2MDlGOUVDQzBBQkZENQ=="
+(* Used only for testing updates *)
+let test_update_key = "RjgyNjVCRURDMzcxMjgzNkQ1NkJENjJERDQ2MDlGOUVDQzBBQkZENQ=="
 
 let trusted_patch_key = ref citrix_patch_key
+let trusted_update_key = ref citrix_update_key
 
 let gen_list_option name desc of_string string_of opt =
   let parse s =

@@ -41,6 +41,7 @@ module Actions = struct
 	module Host = Xapi_host
 	module Host_crashdump = Xapi_host_crashdump
 	module Pool = Xapi_pool
+	module Pool_update = Xapi_pool_update
 	module Pool_patch = Xapi_pool_patch
 	module Host_patch = Xapi_host_patch
 	module Host_metrics = struct end
