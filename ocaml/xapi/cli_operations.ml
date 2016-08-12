@@ -1010,7 +1010,7 @@ let pool_emergency_transition_to_master printer rpc session_id params =
   end
   else
     printer (Cli_printer.PList ["Host agent is already master. Use '--force' to execute the operation anyway."])
-  
+
 let pool_recover_slaves printer rpc session_id params =
   let hosts = Client.Pool.recover_slaves ~rpc ~session_id in
   let host_uuids = List.map (fun href -> Client.Host.get_uuid rpc session_id href) hosts in
@@ -3170,8 +3170,8 @@ let host_get_vms_which_prevent_evacuation printer rpc session_id params =
   let uuid = List.assoc "uuid" params in
   let host = Client.Host.get_by_uuid rpc session_id uuid in
   (* Although the API call get_vms_which_prevent_evacuation was changed within CA-220610
-    to return per VM only one reason why the host cannot be evacuated, it was decided
-    the CLI call should still return all the reasons *)
+     to return per VM only one reason why the host cannot be evacuated, it was decided
+     the CLI call should still return all the reasons *)
   let vms = Client.Host.get_vms_which_prevent_evacuation_all rpc session_id host in
 
   let op (vm, error) =
@@ -4776,3 +4776,55 @@ module PVS_cache_storage = struct
     let ref   = Client.PVS_cache_storage.get_by_uuid ~rpc ~session_id ~uuid in
     Client.PVS_cache_storage.destroy rpc session_id ref
 end
+
+let update_introduce printer rpc session_id params =
+  let vdi_uuid = List.assoc "vdi-uuid" params in
+  let vdi_ref = Client.VDI.get_by_uuid rpc session_id vdi_uuid in
+  let update = Client.Pool_update.introduce rpc session_id vdi_ref in
+  let uuid = Client.Pool_update.get_uuid ~rpc ~session_id ~self:update in
+  printer (Cli_printer.PList [uuid])
+
+let update_precheck printer rpc session_id params =
+  let uuid = List.assoc "uuid" params in
+  ignore(
+    do_host_op rpc session_id (fun _ host ->
+        let host_ref = host.getref () in
+        let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+        Client.Pool_update.precheck rpc session_id ref host_ref
+      ) params ["uuid"]
+  )
+
+let update_apply printer rpc session_id params =
+  let uuid = List.assoc "uuid" params in
+  ignore(
+    do_host_op rpc session_id (fun _ host ->
+        let host_ref = host.getref () in
+        let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+        Client.Pool_update.apply rpc session_id ref host_ref
+      ) params ["uuid"]
+  )
+
+let update_pool_apply printer rpc session_id params =
+  let uuid = List.assoc "uuid" params in
+  let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+  Client.Pool_update.pool_apply rpc session_id ref
+
+let update_clean printer rpc session_id params =
+  let uuid = List.assoc "uuid" params in
+  ignore(
+    do_host_op rpc session_id (fun _ host ->
+        let host_ref = host.getref () in
+        let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+        Client.Pool_update.clean rpc session_id ref host_ref
+      ) params ["uuid"]
+  )
+
+let update_pool_clean printer rpc session_id params =
+  let uuid = List.assoc "uuid" params in
+  let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+  Client.Pool_update.pool_clean rpc session_id ref
+
+let update_destroy printer rpc session_id params =
+  let uuid = List.assoc "uuid" params in
+  let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+  Client.Pool_update.destroy rpc session_id ref

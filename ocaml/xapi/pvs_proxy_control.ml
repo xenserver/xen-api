@@ -21,7 +21,7 @@ module D = Debug.Make(struct let name = "xapi_pvs_proxy_control" end)
 open D
 
 let proxy_port_name vif =
-  (* Interface names in Linux are at most 15 characters. We derive a 
+  (* Interface names in Linux are at most 15 characters. We derive a
      name from the MAC address to ensure uniqueness, and make it fit. *)
   let mac = String.replace ":" "" vif.API.vIF_MAC in
   Printf.sprintf "pvs%s" mac
@@ -72,43 +72,43 @@ module State = struct
     let vif_uuid = Db.VIF.get_uuid ~__context ~self:vif in
     let proxy_uuid = Db.PVS_proxy.get_uuid ~__context ~self:proxy in
     with_xs (fun xs ->
-      let dir = root // site_uuid // vif_uuid in
-      xs.Xs.write (dir // _state) (string_of state);
-      xs.Xs.write (dir // _proxy_uuid) proxy_uuid
-    )
+        let dir = root // site_uuid // vif_uuid in
+        xs.Xs.write (dir // _state) (string_of state);
+        xs.Xs.write (dir // _proxy_uuid) proxy_uuid
+      )
 
   let remove_proxy ~__context site vif =
     let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
     let vif_uuid = Db.VIF.get_uuid ~__context ~self:vif in
     with_xs (fun xs ->
-      let dir = root // site_uuid // vif_uuid in
-      xs.Xs.rm dir
-    )
+        let dir = root // site_uuid // vif_uuid in
+        xs.Xs.rm dir
+      )
 
   let remove_site ~__context site =
     let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
     with_xs (fun xs ->
-      xs.Xs.rm (root // site_uuid)
-    )
+        xs.Xs.rm (root // site_uuid)
+      )
 
   let get_running_proxies ~__context site =
     let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
     with_xs (fun xs ->
-      xs.Xs.directory (root // site_uuid) |>
-      List.filter_map (fun vif_uuid ->
-        try
-          let dir = root // site_uuid // vif_uuid in
-          let state = of_string (xs.Xs.read (dir // _state)) in
-          if state = Starting || state = Started then
-            let proxy_uuid = xs.Xs.read (dir // _proxy_uuid) in
-            let vif = Db.VIF.get_by_uuid ~__context ~uuid:vif_uuid in
-            let proxy = Db.PVS_proxy.get_by_uuid ~__context ~uuid:proxy_uuid in
-            Some (vif, proxy)
-          else
-            None
-        with _ -> None
+        xs.Xs.directory (root // site_uuid) |>
+        List.filter_map (fun vif_uuid ->
+            try
+              let dir = root // site_uuid // vif_uuid in
+              let state = of_string (xs.Xs.read (dir // _state)) in
+              if state = Starting || state = Started then
+                let proxy_uuid = xs.Xs.read (dir // _proxy_uuid) in
+                let vif = Db.VIF.get_by_uuid ~__context ~uuid:vif_uuid in
+                let proxy = Db.PVS_proxy.get_by_uuid ~__context ~uuid:proxy_uuid in
+                Some (vif, proxy)
+              else
+                None
+            with _ -> None
+          )
       )
-    )
 end
 
 let metadata_of_site ~__context ~site ~vdi ~proxies =
@@ -155,10 +155,10 @@ let update_site_on_localhost ~__context ~site ~vdi =
   let open Network_interface.PVS_proxy in
   let dbg = Context.string_of_task __context in
   Mutex.execute configure_proxy_m (fun () ->
-    let proxies = State.get_running_proxies ~__context site in
-    let proxy_config = metadata_of_site ~__context ~site ~vdi ~proxies in
-    Network.Net.PVS_proxy.configure_site dbg proxy_config
-  )
+      let proxies = State.get_running_proxies ~__context site in
+      let proxy_config = metadata_of_site ~__context ~site ~vdi ~proxies in
+      Network.Net.PVS_proxy.configure_site dbg proxy_config
+    )
 
 (** Request xcp-networkd to tell the local PVS-proxy daemon that it must stop
  *  proxying for the given site, and release the associated cache VDI. *)
@@ -169,8 +169,8 @@ let remove_site_on_localhost ~__context ~site =
   let uuid = Db.PVS_site.get_uuid ~__context ~self:site in
   State.remove_site ~__context site;
   Mutex.execute configure_proxy_m (fun () ->
-    Network.Net.PVS_proxy.remove_site dbg uuid
-  )
+      Network.Net.PVS_proxy.remove_site dbg uuid
+    )
 
 exception No_cache_sr_available
 
@@ -271,10 +271,10 @@ let stop_proxy ~__context vif proxy =
     error "Unable to disable PVS proxy for VIF %s: %s." (Ref.string_of vif) reason
 
 let clear_proxy_state ~__context vif proxy =
-    let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
-    State.remove_proxy ~__context site vif;
-    Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:false;
-    Db.PVS_proxy.set_status ~__context ~self:proxy ~value:`stopped
+  let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
+  State.remove_proxy ~__context site vif;
+  Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:false;
+  Db.PVS_proxy.set_status ~__context ~self:proxy ~value:`stopped
 
 let find_proxy_for_vif ~__context ~vif =
   let open Db_filter_types in

@@ -400,6 +400,13 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
         Ref.string_of patch
     with _ -> "invalid"
 
+  let pool_update_uuid ~__context update =
+    try if Pool_role.is_master () then
+        Db.Pool_update.get_uuid __context update
+      else
+        Ref.string_of update
+    with _ -> "invalid"
+
   let pci_uuid ~__context pci =
     try if Pool_role.is_master () then
         Db.PCI.get_uuid __context pci
@@ -1338,7 +1345,7 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
           (Db.VM.get_name_label ~__context ~self:vm)
       in
       let (name, priority) = Api_messages.vm_shutdown in
-      (try ignore(Xapi_message.create ~__context ~name 
+      (try ignore(Xapi_message.create ~__context ~name
                     ~priority ~cls:`VM ~obj_uuid:uuid ~body:message_body) with _ -> ())
 
     let clean_reboot ~__context ~vm =
@@ -1611,11 +1618,11 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
         (vm_uuid ~__context vm) (host_uuid ~__context host);
       let source_host = Db.VM.get_resident_on ~__context ~self:vm in
       let to_equal_or_greater_version = Helpers.host_versions_not_decreasing ~__context
-        ~host_from:(Helpers.LocalObject source_host)
-        ~host_to:(Helpers.LocalObject host) in
+          ~host_from:(Helpers.LocalObject source_host)
+          ~host_to:(Helpers.LocalObject host) in
 
       if (Helpers.rolling_upgrade_in_progress ~__context) && (not to_equal_or_greater_version) then
-          raise (Api_errors.Server_error (Api_errors.not_supported_during_upgrade, []));
+        raise (Api_errors.Server_error (Api_errors.not_supported_during_upgrade, []));
 
       let local_fn = Local.VM.pool_migrate ~vm ~host ~options in
 
@@ -2645,6 +2652,30 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
       Xapi_pool_patch.destroy ~__context ~self
   end
 
+  module Pool_update = struct
+    let introduce ~__context ~vdi =
+      info "Pool_update.introduce: vdi = '%s'" (vdi_uuid ~__context vdi);
+      Local.Pool_update.introduce ~__context ~vdi
+
+    let pool_apply ~__context ~self =
+      info "Pool_update.pool_apply: pool update = '%s'" (pool_update_uuid ~__context self);
+      Local.Pool_update.pool_apply ~__context ~self
+
+    let clean ~__context ~self ~host =
+      info "Pool_update.clean: pool update = '%s'" (pool_update_uuid ~__context self);
+      let local_fn = Local.Pool_update.clean ~self ~host in
+      do_op_on ~local_fn ~__context ~host
+        (fun session_id rpc -> Client.Pool_update.clean rpc session_id self host)
+
+    let pool_clean ~__context ~self =
+      info "Pool_update.pool_clean: pool update = '%s'" (pool_update_uuid ~__context self);
+      Local.Pool_update.pool_clean ~__context ~self
+
+    let destroy ~__context ~self =
+      info "Pool_update.destroy: pool update = '%s'" (pool_update_uuid ~__context self);
+      Local.Pool_update.destroy ~__context ~self
+  end
+
   module Host_metrics = struct
   end
 
@@ -2985,7 +3016,7 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
             Client.PIF.reconfigure_ipv6 rpc session_id self mode iPv6 gateway dNS) in
       tolerate_connection_loss fn success !Xapi_globs.pif_reconfigure_ip_timeout
 
-    let set_primary_address_type ~__context ~self ~primary_address_type = 
+    let set_primary_address_type ~__context ~self ~primary_address_type =
       info "PIF.set_primary_address_type: PIF = '%s'; primary_address_type = '%s'"
         (pif_uuid ~__context self)
         (Record_util.primary_address_type_to_string primary_address_type);
