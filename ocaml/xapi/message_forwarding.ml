@@ -710,6 +710,14 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 		let set_vswitch_controller ~__context ~address =
 			info "Pool.set_vswitch_controller: pool = '%s'; address = '%s'" (current_pool_uuid ~__context) address;
 			Local.Pool.set_vswitch_controller ~__context ~address
+
+		let enable_ssl_legacy ~__context ~self =
+			info "Pool.enable_ssl_legacy: pool = '%s'" (pool_uuid ~__context self);
+			Local.Pool.enable_ssl_legacy ~__context ~self
+
+		let disable_ssl_legacy ~__context ~self =
+			info "Pool.disable_ssl_legacy: pool = '%s'" (pool_uuid ~__context self);
+			Local.Pool.disable_ssl_legacy ~__context ~self
 	end
 
 	module VM = struct
@@ -1987,6 +1995,21 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 		let set_license_params ~__context ~self ~value =
 			info "Host.set_license_params: host = '%s'; license_params = [ %s ]" (host_uuid ~__context self) (String.concat ", " (List.map (fun (k, v) -> k ^ "=" ^ v) value));
 			Local.Host.set_license_params ~__context ~self ~value
+
+		let set_ssl_legacy ~__context ~self ~value =
+			info "Host.set_ssl_legacy: host = '%s'; value = %b" (host_uuid ~__context self) value;
+			let success () =
+				if Db.Host.get_ssl_legacy ~__context ~self = value
+				then Some ()
+				else None
+			in
+			let local_fn = Local.Host.set_ssl_legacy ~self ~value in
+			let fn () =
+				do_op_on ~local_fn ~__context ~host:self
+					(fun session_id rpc ->
+						Client.Host.set_ssl_legacy rpc session_id self value)
+			in
+			tolerate_connection_loss fn success 30.
 
 		let ha_disable_failover_decisions ~__context ~host =
 			info "Host.ha_disable_failover_decisions: host = '%s'" (host_uuid ~__context  host);

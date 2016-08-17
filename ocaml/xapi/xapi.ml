@@ -691,6 +691,34 @@ let set_stunnel_timeout () =
   with _ ->
     debug "Using default stunnel timeout (usually 43200)"
 
+(* Consult inventory, because to do DB lookups we must contact the
+ * master, and to do that we need to start an outgoing stunnel. *)
+let set_stunnel_legacy_inv ~__context () =
+  Stunnel.set_good_ciphersuites (match !Xapi_globs.ciphersuites_good_outbound with
+    | None -> raise (Api_errors.Server_error (Api_errors.internal_error,["Configuration file does not specify ciphersuites-good-outbound."]))
+    | Some s -> s
+  );
+  Stunnel.set_legacy_ciphersuites !Xapi_globs.ciphersuites_legacy_outbound;
+  let s = Xapi_inventory.lookup Xapi_inventory._stunnel_legacy ~default:"true" in
+  let legacy = try
+	  bool_of_string s
+  with e ->
+	  error "Invalid inventory value for %s: expected a Boolean; found %s" Xapi_inventory._stunnel_legacy s;
+	  raise e
+  in
+  Xapi_host.set_stunnel_legacy ~__context legacy
+
+(* Consult database, in case inventory was out of date due to a DB change while
+ * we were shut down. *)
+let set_stunnel_legacy_db ~__context () =
+  let legacy_cur = Stunnel.is_legacy_protocol_and_ciphersuites_allowed () in
+  let localhost = Helpers.get_localhost ~__context in
+  let legacy_db = Db.Host.get_ssl_legacy ~__context ~self:localhost in
+  if legacy_db <> legacy_cur then begin
+    debug "Stunnel legacy (current) = %b,  stunnel legacy (DB) = %b, reconfig based on DB" legacy_cur legacy_db;
+    Xapi_host.set_stunnel_legacy ~__context legacy_db
+  end
+
 let server_init() =
   let listen_unix_socket () =
     (* Always listen on the Unix domain socket first *)
@@ -804,6 +832,7 @@ let server_init() =
     "Reading external global variables definition", [ Startup.NoExnRaising ], Xapi_globs.read_external_config;
     "XAPI SERVER STARTING", [], print_server_starting_message;
     "Parsing inventory file", [], Xapi_inventory.read_inventory;
+    "Config (from file) for incoming/outgoing stunnel instances", [], set_stunnel_legacy_inv ~__context;
     "Setting stunnel timeout", [], set_stunnel_timeout;
     "Initialising local database", [], init_local_database;
 	"Loading DHCP leases", [], Xapi_udhcpd.init;
@@ -902,6 +931,7 @@ let server_init() =
     Startup.run ~__context [
       "Checking emergency network reset", [], check_network_reset;
       "Upgrade bonds to Boston", [Startup.NoExnRaising], Sync_networking.fix_bonds ~__context;
+      "Reconfig (from DB) for incoming/outgoing stunnel instances", [], set_stunnel_legacy_db ~__context;
       "Synchronising bonds on slave with master", [Startup.OnlySlave; Startup.NoExnRaising], Sync_networking.copy_bonds_from_master ~__context;
       "Synchronising VLANs on slave with master", [Startup.OnlySlave; Startup.NoExnRaising], Sync_networking.copy_vlans_from_master ~__context;
       "Synchronising tunnels on slave with master", [Startup.OnlySlave; Startup.NoExnRaising], Sync_networking.copy_tunnels_from_master ~__context;

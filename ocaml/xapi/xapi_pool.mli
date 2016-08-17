@@ -118,7 +118,9 @@ val ha_schedule_plan_recomputation : __context:'a -> unit
 
 (** {2 (Fill in Title!)} *)
 
-val call_fn_on_hosts :
+(** Call the function on the slaves first. When those calls have all
+ *  returned, call the function on the master. *)
+val call_fn_on_slaves_then_master :
   __context:Context.t ->
   (rpc:(XMLRPC.xmlrpc -> Xml.xml) ->
    session_id:API.ref_session -> host:[ `host ] Ref.t -> 'a) ->
@@ -192,3 +194,6 @@ val audit_log_append : __context:Context.t -> line:string -> unit
 val test_archive_target : __context:Context.t -> self:API.ref_pool -> config:API.string_to_string_map -> string
 val enable_local_storage_caching : __context:Context.t -> self:API.ref_pool -> unit
 val disable_local_storage_caching : __context:Context.t -> self:API.ref_pool -> unit
+
+val disable_ssl_legacy : __context:Context.t -> self:API.ref_pool -> unit
+val enable_ssl_legacy : __context:Context.t -> self:API.ref_pool -> unit
