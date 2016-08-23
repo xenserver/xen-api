@@ -3982,6 +3982,27 @@ let pool_update_destroy = call
   ~allowed_roles:_R_POOL_OP
   ()
 
+let pool_update_attach = call
+  ~name:"attach"
+  ~doc:"Attach the pool update VDI"
+  ~in_oss_since:None
+  ~in_product_since:rel_ely
+  ~params:[ Ref _pool_update, "self", "The update to be attached"; 
+  			Ref _host, "host", "The host to attach the update to"]
+  ~result:(String, "The file URL of pool update")
+  ~allowed_roles:_R_POOL_OP
+  ()
+
+let pool_update_detach = call
+  ~name:"detach"
+  ~doc:"Detach the pool update VDI"
+  ~in_oss_since:None
+  ~in_product_since:rel_ely
+  ~params:[ Ref _pool_update, "self", "The update to be detached"; 
+  			Ref _host, "host", "The host to detach the update from"]
+  ~allowed_roles:_R_POOL_OP
+  ()
+
 let pool_update =
   create_obj ~in_db:true
     ~in_product_since:rel_ely
@@ -4004,11 +4025,14 @@ let pool_update =
     	pool_update_clean;
     	pool_update_pool_clean;
     	pool_update_destroy;
+    	pool_update_attach;
+    	pool_update_detach;
     ]
     ~contents:
     [ uid       ~in_oss_since:None _pool_update;
       namespace ~name:"name" ~contents:(names None StaticRO) ();
       field     ~in_product_since:rel_ely ~default_value:(Some (VInt Int64.zero)) ~in_oss_since:None ~qualifier:StaticRO ~ty:Int "installation_size" "Size of the update in bytes";
+      field     ~in_product_since:rel_ely ~default_value:(Some (VString "")) ~in_oss_since:None ~qualifier:StaticRO ~ty:String "key" "GPG key of the update";
       field     ~in_product_since:rel_ely ~default_value:(Some (VSet [])) ~in_oss_since:None ~qualifier:StaticRO ~ty:(Set pool_update_after_apply_guidance) "after_apply_guidance" "What the client should do after this update has been applied.";
       field     ~in_oss_since:None ~qualifier:StaticRO ~ty:(Ref _vdi) "vdi" "VDI the update was uploaded to";
       field     ~in_product_since:rel_ely ~in_oss_since:None ~qualifier:DynamicRO ~ty:(Set (Ref _host)) "hosts" "The hosts that have applied this update.";
