@@ -70,7 +70,20 @@ let handle_shutdown () =
 	Sys.set_signal Sys.sigint (Sys.Signal_handle stop);
 	Sys.set_signal Sys.sigpipe Sys.Signal_ignore
 
+(* Read the xcp-networkd.conf *)
+let read_config () =
+	let configargs = [
+		"enic-workaround-until-version", Config.Set_string Network_server.enic_workaround_until_version;
+	] in
+	try
+		Config.read Fhs.networkdconf configargs (fun _ _ -> ());
+	with Config.Error ls ->
+		List.iter (fun (p, s) -> debug "Config file error: %s: %s\n" p s) ls;
+		exit 2
+
 let _ =
+	(* Read configuration file. *)
+	read_config ();
 	let pidfile = ref "" in
 	let daemonize = ref false in
 	Debug.set_facility Syslog.Local5;
