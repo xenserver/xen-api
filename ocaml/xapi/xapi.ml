@@ -994,6 +994,8 @@ let server_init() =
           (fun () -> call_extauth_hook_script_before_xapi_initialize ~__context);
       "Calling on_xapi_initialize event hook in the external authentication plugin", [ Startup.NoExnRaising; Startup.OnThread ],
           (fun () -> event_hook_auth_on_xapi_initialize_async ~__context);
+      "Cleanup attached pool_updates when start", [ Startup.NoExnRaising ],
+          (fun () -> Helpers.call_api_functions ~__context (fun rpc session_id -> Xapi_pool_update.detach_attached_updates __context));
     ];
 
     debug "startup: startup sequence finished");
