@@ -9164,6 +9164,7 @@ let http_actions = [
   ("post_json_options", (Options, Constants.json_uri, false, [], _R_READ_ONLY, []));
   ("post_jsonrpc", (Post, Constants.jsonrpc_uri, false, [], _R_READ_ONLY, []));
   ("post_jsonrpc_options", (Options, Constants.jsonrpc_uri, false, [], _R_READ_ONLY, []));
+  ("get_pool_update_download", (Get, Constants.get_pool_update_download_uri, false, [], _R_READ_ONLY, []));
 ]
 
 (* these public http actions will NOT be checked by RBAC *)
@@ -9181,6 +9182,7 @@ let public_http_actions_with_no_rbac_check =
 		"post_json_options"; 
 		"post_jsonrpc";
 		"post_jsonrpc_options";
+		"get_pool_update_download";
 	]
 
 (* permissions not associated with any object message or field *)
