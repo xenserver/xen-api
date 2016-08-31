@@ -4006,6 +4006,16 @@ let pool_update_detach = call
   ~allowed_roles:_R_POOL_OP
   ()
 
+let pool_update_resync_host = call
+  ~name:"resync_host"
+  ~hide_from_docs:true
+  ~doc:"Resync the applied updates of the host"
+  ~in_oss_since:None
+  ~in_product_since:rel_ely
+  ~params:[ Ref _host, "host", "The host to resync the applied updates"]
+  ~allowed_roles:_R_POOL_OP
+  ()
+
 let pool_update =
   create_obj ~in_db:true
     ~in_product_since:rel_ely
@@ -4030,6 +4040,7 @@ let pool_update =
     	pool_update_destroy;
     	pool_update_attach;
     	pool_update_detach;
+    	pool_update_resync_host;
     ]
     ~contents:
     [ uid       ~in_oss_since:None _pool_update;
@@ -8957,7 +8968,7 @@ let all_relations =
     (_host_patch, "host"), (_host, "patches");
     (_host_patch, "pool_patch"), (_pool_patch, "host_patches");
 
-    (_pool_update, "hosts"), (_host, "updates");
+    (_host, "updates"), (_pool_update, "hosts");
 
     (_subject, "roles"), (_subject, "roles");
     (*(_subject, "roles"), (_role, "subjects");*)
