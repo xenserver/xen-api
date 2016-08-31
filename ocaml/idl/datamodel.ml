@@ -3989,8 +3989,7 @@ let pool_update_attach = call
   ~doc:"Attach the pool update VDI"
   ~in_oss_since:None
   ~in_product_since:rel_ely
-  ~params:[ Ref _pool_update, "self", "The update to be attached"; 
-  			Ref _host, "host", "The host to attach the update to"]
+  ~params:[ Ref _pool_update, "self", "The update to be attached"]
   ~result:(String, "The file URL of pool update")
   ~allowed_roles:_R_POOL_OP
   ()
@@ -4001,8 +4000,7 @@ let pool_update_detach = call
   ~doc:"Detach the pool update VDI"
   ~in_oss_since:None
   ~in_product_since:rel_ely
-  ~params:[ Ref _pool_update, "self", "The update to be detached"; 
-  			Ref _host, "host", "The host to detach the update from"]
+  ~params:[ Ref _pool_update, "self", "The update to be detached"]
   ~allowed_roles:_R_POOL_OP
   ()
 
