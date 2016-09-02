@@ -21,19 +21,22 @@ exception No_cache_sr_available
 exception No_cache_vdi_present
 
 module VDI = struct
-	let find_all ~__context ~sr =
+	let find_all ~__context ~sr ~site =
 		let open Db_filter_types in
-		Db.VDI.get_refs_where ~__context ~expr:(And
+		match Db.PVS_cache_storage.get_refs_where ~__context ~expr:(And
 			(Eq (Field "SR", Literal (Ref.string_of sr)),
-			Eq (Field "type", Literal "pvs_cache")))
+			Eq (Field "site", Literal (Ref.string_of site))))
+		with
+		| [] -> None, []
+		| cacheSR :: _ -> Some cacheSR, (Db.PVS_cache_storage.get_cache_VDIs ~__context ~self:cacheSR)
 
-	let find_one ~__context ~sr =
-		match find_all ~__context ~sr with
-		| [] -> None
-		| vdi :: _ -> Some vdi
+	let find_one ~__context ~sr ~site ~host =
+		match find_all ~__context ~sr ~site with
+		| (None, _) -> None
+		| (_, vdi_map) -> try Some (List.assoc host vdi_map) with _ -> None
 
-	let create ~__context ~sr ~size =
-		Helpers.call_api_functions ~__context (fun rpc session_id ->
+	let create ~__context ~sr ~size ~site ~host =
+		let vdi_ref = Helpers.call_api_functions ~__context (fun rpc session_id ->
 			Client.VDI.create ~rpc ~session_id
 				~name_label:"PVS cache VDI"
 				~name_description:"PVS cache VDI"
@@ -46,10 +49,16 @@ module VDI = struct
 				~xenstore_data:[]
 				~sm_config:[]
 				~tags:[])
+		in
+		begin match find_all ~__context ~sr ~site with
+		| (None, _) -> ()
+		| (Some cacheSR, vdi_map) -> Db.PVS_cache_storage.set_cache_VDIs ~__context ~self:cacheSR ~value:(vdi_map @ [host, vdi_ref])
+		end;
+		vdi_ref
 end
 
 let check_cache_availability ~__context ~host ~site =
-        let srs = 
+	let srs = 
 		(Db.PVS_site.get_cache_storage ~__context ~self:site
 		|> List.map (fun pcs -> Db.PVS_cache_storage.get_SR ~__context ~self:pcs, 
 					Db.PVS_cache_storage.get_size ~__context ~self:pcs) 
@@ -65,7 +74,7 @@ let check_cache_availability ~__context ~host ~site =
 		match
 			List.filter_map
 				(fun (sr, size) ->
-					VDI.find_one ~__context ~sr
+					VDI.find_one ~__context ~sr ~site ~host
 					|> Opt.map (fun vdi -> sr, size, vdi))
 				sorted_srs
 		with
@@ -79,11 +88,11 @@ let find_or_create_cache_vdi ~__context ~host ~site =
 	Mutex.execute cache_m (fun () ->
 		match check_cache_availability ~__context ~host ~site with
 		| None -> raise No_cache_sr_available
-		| Some (sr, size, None) -> sr, VDI.create ~__context ~sr ~size
+		| Some (sr, size, None) -> sr, VDI.create ~__context ~sr ~size ~site ~host
 		| Some (sr, size, Some vdi) -> sr, vdi)
 
-let find_cache_vdi ~__context ~sr =
-	match VDI.find_one ~__context ~sr with
+let find_cache_vdi ~__context ~sr ~site ~host =
+	match VDI.find_one ~__context ~sr ~site ~host with
 	| None -> raise No_cache_vdi_present
 	| Some vdi -> vdi
 
