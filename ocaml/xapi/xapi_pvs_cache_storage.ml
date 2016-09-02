@@ -43,6 +43,6 @@ let destroy ~__context ~self =
 	if sr_is_in_use ~__context site sr then
 		api_error E.pvs_site_sr_is_in_use [str site; str sr]
 	else begin
-		Xapi_pvs_cache.on_sr_remove ~__context ~sr;
+		Xapi_pvs_cache.on_sr_remove ~__context ~sr ~site;
 		Db.PVS_cache_storage.destroy ~__context ~self
 	end

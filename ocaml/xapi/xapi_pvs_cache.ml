@@ -96,12 +96,13 @@ let find_cache_vdi ~__context ~sr ~site ~host =
 	| None -> raise No_cache_vdi_present
 	| Some vdi -> vdi
 
-let on_sr_remove ~__context ~sr =
-	match VDI.find_all ~__context ~sr with
-	| [] -> ()
-	| vdis ->
+let on_sr_remove ~__context ~sr ~site =
+	match VDI.find_all ~__context ~sr ~site with
+	| (None, _) -> ()
+	| (Some cacheSR, vdi_map) ->
 		Helpers.call_api_functions ~__context
 			(fun rpc session_id ->
 				List.iter
-					(fun vdi -> Client.VDI.destroy ~rpc ~session_id ~self:vdi)
-					vdis)
+					(fun (_,vdi) -> Client.VDI.destroy ~rpc ~session_id ~self:vdi)
+				vdi_map);
+		Db.PVS_cache_storage.set_cache_VDIs ~__context ~self:cacheSR ~value:[]
