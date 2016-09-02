@@ -1816,6 +1816,11 @@ let pvs_cache_storage_record rpc session_id pvs_site =
 			; make_field ~name:"sr-uuid"
 				~get:(fun () -> (x ()).API.pVS_cache_storage_SR |> get_uuid_from_ref)
 				()
+
+			; make_field ~name:"cache-vdis" ~hidden:true
+				~get:(fun () -> Record_util.s2sm_to_string "; " (List.map (fun (a, b) -> (get_uuid_from_ref a), (get_uuid_from_ref b)) (x ()).API.pVS_cache_storage_cache_VDIs))
+				()
+
 			; make_field ~name:"size"
 				~get:(fun () -> (x ()).API.pVS_cache_storage_size
 						|> Int64.to_string)

@@ -3922,7 +3922,11 @@ module Forward = functor(Local: Custom_actions.CUSTOM_ACTIONS) -> struct
 	module PVS_proxy = struct
 		let create ~__context ~site ~vIF ~prepopulate =
 			info "PVS_proxy.create";
-			Local.PVS_proxy.create ~__context ~site ~vIF ~prepopulate
+			let vm = Db.VIF.get_VM ~__context ~self:vIF in
+			let host = Db.VM.get_resident_on ~__context ~self:vm in
+			let local_fn = Local.PVS_proxy.create ~site ~vIF ~prepopulate in
+			do_op_on ~local_fn ~__context ~host (fun session_id rpc ->
+				Client.PVS_proxy.create  ~rpc ~session_id  ~site ~vIF ~prepopulate)
 
 		let destroy ~__context ~self =
 			info "PVS_proxy.destroy";

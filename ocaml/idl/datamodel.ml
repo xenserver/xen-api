@@ -18,7 +18,7 @@ open Datamodel_types
 (* IMPORTANT: Please bump schema vsn if you change/add/remove a _field_.
               You do not have to bump vsn if you change/add/remove a message *)
 let schema_major_vsn = 5
-let schema_minor_vsn = 105
+let schema_minor_vsn = 106
 
 (* Historical schema versions just in case this is useful later *)
 let rio_schema_major_vsn = 5
@@ -8990,6 +8990,10 @@ module PVS_cache_storage = struct
 		; field   ~qualifier:StaticRO ~lifecycle
 		          ~ty:(Ref _sr) "SR" ~default_value:null_ref
 		          "SR providing storage for the PVS cache"
+
+		; field  ~qualifier:DynamicRO ~lifecycle
+		         ~ty:(Map (Ref _host, Ref _vdi))  "cache_VDIs" ~default_value:(Some (VMap []))
+		         "Host mapped cache VDIs on PVS cache storage"
 
 		; field   ~qualifier:StaticRO ~lifecycle
 		          ~ty:Int "size" ~default_value:(Some (VInt (Int64.of_int (20 * 1024 * 1024 * 1024))))

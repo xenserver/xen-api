@@ -18,7 +18,7 @@ let api_error msg xs = raise (E.Server_error (msg, xs))
 let str ref = Ref.string_of ref
 
 let create ~__context ~site ~sR ~size =
-	let caches = Db.PVS_cache_storage.get_all ~__context in
+	let caches = Db.PVS_site.get_cache_storage ~__context ~self:site in
 	let srs = List.map (fun pcs -> Db.PVS_cache_storage.get_SR ~__context ~self:pcs) caches in
 
 	if List.mem sR srs then
@@ -26,7 +26,7 @@ let create ~__context ~site ~sR ~size =
 	else
 		let cache_storage = Ref.make () in
 		let uuid = Uuidm.to_string (Uuidm.create `V4) in
-			Db.PVS_cache_storage.create ~__context ~ref:cache_storage ~uuid ~site ~sR ~size;
+		Db.PVS_cache_storage.create ~__context ~ref:cache_storage ~uuid ~site ~sR ~cache_VDIs:[] ~size;
 		cache_storage
 
 
@@ -43,6 +43,6 @@ let destroy ~__context ~self =
 	if sr_is_in_use ~__context site sr then
 		api_error E.pvs_site_sr_is_in_use [str site; str sr]
 	else begin
-		Xapi_pvs_cache.on_sr_remove ~__context ~sr;
+		Xapi_pvs_cache.on_sr_remove ~__context ~sr ~site;
 		Db.PVS_cache_storage.destroy ~__context ~self
 	end
