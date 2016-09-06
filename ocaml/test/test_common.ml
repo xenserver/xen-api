@@ -278,3 +278,10 @@ let make_vgpu_type ~__context ?(ref=Ref.make ()) ?(uuid=make_uuid ())
 		~framebuffer_size ~max_heads ~max_resolution_x ~max_resolution_y ~size
 		~internal_config ~implementation ~identifier ~experimental;
 	ref
+
+let make_pool_update ~__context ?(ref=Ref.make ()) ?(uuid=make_uuid ())
+		?(name_label="") ?(name_description="") ?(installation_size=0L) ?(key="")
+		?(after_apply_guidance=[]) ?(vdi=Ref.null) () =
+	Db.Pool_update.create ~__context ~ref ~uuid ~name_label ~name_description
+		~installation_size ~key ~after_apply_guidance ~vdi;
+	ref
