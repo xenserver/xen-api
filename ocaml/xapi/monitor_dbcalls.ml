@@ -23,21 +23,6 @@ open Threadext
 module D = Debug.Make(struct let name = "monitor_dbcalls" end)
 open D
 
-(* Helper map functions. *)
-let transfer_map ~source ~target =
-	Hashtbl.clear target;
-	Hashtbl.iter (fun k v -> Hashtbl.add target k v) source;
-	Hashtbl.clear source
-
-let get_updates ~before ~after ~f =
-	Hashtbl.fold (fun k v acc ->
-		if (try v <> Hashtbl.find before k with Not_found -> true)
-		then (f k v acc)
-		else acc
-	) after []
-let get_updates_map = get_updates ~f:(fun k v acc -> (k, v)::acc)
-let get_updates_values = get_updates ~f:(fun _ v acc -> v::acc)
-
 let get_host_memory_changes xc =
 	let physinfo = Xenctrl.physinfo xc in
 	let bytes_of_pages pages =
@@ -86,10 +71,6 @@ let get_pif_and_bond_changes () =
 				Hashtbl.add bonds_links_up_tmp dev stat.links_up;
 			let pif = {
 				pif_name = dev;
-				pif_tx = -1.0;
-				pif_rx = -1.0;
-				pif_raw_tx = 0L;
-				pif_raw_rx = 0L;
 				pif_carrier = stat.carrier;
 				pif_speed = stat.speed;
 				pif_duplex = stat.duplex;
@@ -159,6 +140,7 @@ let monitor_dbcall_thread () =
 		while true do
 			try
 				pifs_and_memory_update_fn xc;
+				Monitor_pvs_proxy.update ();
 				Thread.delay 5.
 			with e ->
 				debug "monitor_dbcall_thread would have died from: %s; restarting in 30s."

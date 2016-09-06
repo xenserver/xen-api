@@ -157,30 +157,6 @@ let shutdown  ~__context ~host = ()
 
 let reboot  ~__context ~host = ()
 
-let update_host_metrics ~__context ~host ~memory_total ~memory_free = 
-  (* If HA is enabled then we don't set the live flag at all.
-     If the node is marked as shutting down then we ignore the heartbeats. *)
-  let pool = Helpers.get_pool ~__context in
-  let ha_enabled = Db.Pool.get_ha_enabled ~__context ~self:pool in
-  let shutting_down =  
-    Mutex.execute Xapi_globs.hosts_which_are_shutting_down_m
-      (fun () -> List.mem host !Xapi_globs.hosts_which_are_shutting_down) in
-  let should_set_live = not ha_enabled && not shutting_down in
-
-  let last_updated = Date.of_float (Unix.gettimeofday ()) in
-  let m = Db.Host.get_metrics ~__context ~self:host in
-  (* Every host should always have a Host_metrics object *)
-  if Db.is_valid_ref __context m then begin
-    Db.Host_metrics.set_memory_total ~__context ~self:m ~value:memory_total;
-    Db.Host_metrics.set_memory_free ~__context ~self:m ~value:memory_free;
-    Db.Host_metrics.set_last_updated ~__context ~self:m ~value:last_updated;
-    if should_set_live then begin
-      Db.Host_metrics.set_live ~__context ~self:m ~value:true;
-      update_allowed_operations ~__context ~self:host
-    end	
-  end
-  else warn "Host %s has invalid Host_metrics object reference" (Ref.string_of host)
-
 (* When the Host.shutdown and Host.reboot calls return to the master, the slave is 
    shutting down asycnronously. We immediately set the Host_metrics.live to false 
    and add the host to the global list of known-dying hosts. *)

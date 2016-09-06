@@ -8891,6 +8891,14 @@ let pvs_server = PVS_server.obj
 module PVS_proxy = struct
 	let lifecycle = [Prototyped, rel_dundee_plus, ""]
 
+	let status = Enum ("pvs_proxy_status", [
+			"stopped", "The proxy is not currently running";
+			"initialised", "The proxy is setup but has not yet cached anything";
+			"caching", "The proxy is currently caching data";
+			"incompatible_write_cache_mode", "The PVS device is configured to use an incompatible write-cache mode";
+			"incompatible_protocol_version", "The PVS protocol in use is not compatible with the PVS proxy";
+		])
+
 	let create = call
 		~name:"create"
 		~doc:"Configure a VM/VIF to use a PVS proxy"
@@ -8957,6 +8965,10 @@ module PVS_proxy = struct
 		; field   ~qualifier:DynamicRO ~lifecycle
 		          ~ty:Bool "currently_attached" ~default_value:null_bool
 		          "true = VM is currently proxied"
+
+		; field   ~qualifier:DynamicRO ~lifecycle
+		          ~ty:status "status" ~default_value:(Some (VEnum "stopped"))
+		          "The run-time status of the proxy"
 
 		; field   ~qualifier:DynamicRO ~lifecycle
 		          ~ty:(Ref _sr) "cache_SR" ~default_value:null_ref
@@ -9313,7 +9325,6 @@ let http_actions = [
   ("get_message_rss_feed", (Get, Constants.message_rss_feed, false, [], _R_POOL_ADMIN, []));  (* not enabled in xapi *)
   ("put_messages", (Put, Constants.message_put_uri, false, [], _R_VM_POWER_ADMIN, []));
   ("connect_remotecmd", (Connect, Constants.remotecmd_uri, false, [], _R_POOL_ADMIN, []));
-  ("post_remote_stats", (Post, Constants.remote_stats_uri, false, [], _R_POOL_ADMIN, []));  (* deprecated *)
   ("get_wlb_report", (Get, Constants.wlb_report_uri, true,
  	      [String_query_arg "report"; Varargs_query_arg], _R_READ_ONLY, []));
   ("get_wlb_diagnostics", (Get, Constants.wlb_diagnostics_uri, true, [], _R_READ_ONLY, []));
