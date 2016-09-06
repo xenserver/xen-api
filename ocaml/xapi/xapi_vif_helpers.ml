@@ -258,7 +258,7 @@ let destroy  ~__context ~self =
 (* copy a vif *)
 let copy ~__context ~vm ~preserve_mac_address vif =
 	let all = Db.VIF.get_record ~__context ~self:vif in
-	create ~__context
+	let result = create ~__context
 		~device:all.API.vIF_device
 		~network:all.API.vIF_network
 		~currently_attached:all.API.vIF_currently_attached
@@ -277,4 +277,27 @@ let copy ~__context ~vm ~preserve_mac_address vif =
 		~ipv6_configuration_mode:all.API.vIF_ipv6_configuration_mode
 		~ipv6_addresses:all.API.vIF_ipv6_addresses
 		~ipv6_gateway:all.API.vIF_ipv6_gateway
-
+	in
+	let proxies = Db.PVS_proxy.get_records_where
+		~__context
+		~expr:Db_filter_types.(Eq (Field "VIF", Literal (Ref.string_of vif))) in
+	List.iter (fun (_,proxy) ->
+		try
+			let site = proxy.API.pVS_proxy_site in
+			let vIF = result in
+			let prepopulate = proxy.API.pVS_proxy_prepopulate in
+			let pvs_proxy = Ref.make () in
+			let uuid = Uuidm.to_string (Uuidm.create `V4) in
+			Db.PVS_proxy.create
+				~__context
+				~ref:pvs_proxy
+				~uuid
+				~site
+				~vIF
+				~prepopulate
+				~currently_attached:false
+				~cache_SR:Ref.null
+		with e ->
+			warn "Ignoring exception raised while creating PVS_proxy when copying a VIF: %s"
+				(Printexc.to_string e)) proxies;
+	result
