@@ -4058,6 +4058,7 @@ let pool_patch_apply = call
   ~params:[ Ref _pool_patch, "self", "The patch to apply"; Ref _host, "host", "The host to apply the patch too" ]  
   ~result:(String, "the output of the patch application process")
   ~allowed_roles:_R_POOL_OP
+  ~internal_deprecated_since:rel_ely
   ()
 
 let pool_patch_precheck = call
@@ -4068,6 +4069,7 @@ let pool_patch_precheck = call
   ~params:[ Ref _pool_patch, "self", "The patch whose prechecks will be run"; Ref _host, "host", "The host to run the prechecks on" ]  
   ~result:(String, "the output of the patch prechecks")
   ~allowed_roles:_R_POOL_OP
+  ~internal_deprecated_since:rel_ely
   ()
 
 let pool_patch_clean = call
@@ -4077,6 +4079,7 @@ let pool_patch_clean = call
   ~in_product_since:rel_miami
   ~params:[ Ref _pool_patch, "self", "The patch to clean up" ]
   ~allowed_roles:_R_POOL_OP
+  ~internal_deprecated_since:rel_ely
   ()
 
 let pool_patch_clean_on_host = call
@@ -4086,6 +4089,7 @@ let pool_patch_clean_on_host = call
   ~in_product_since:rel_tampa
   ~params:[ Ref _pool_patch, "self", "The patch to clean up"; Ref _host, "host", "The host on which to clean the patch"  ]
   ~allowed_roles:_R_POOL_OP
+  ~internal_deprecated_since:rel_ely
   ()
 
 let pool_patch_pool_clean = call
@@ -4095,6 +4099,7 @@ let pool_patch_pool_clean = call
   ~in_product_since:rel_tampa
   ~params:[ Ref _pool_patch, "self", "The patch to clean up" ]
   ~allowed_roles:_R_POOL_OP
+  ~internal_deprecated_since:rel_ely
   ()
 
 let pool_patch_destroy = call
@@ -4104,6 +4109,7 @@ let pool_patch_destroy = call
   ~in_product_since:rel_miami
   ~params:[ Ref _pool_patch, "self", "The patch to destroy" ]
   ~allowed_roles:_R_POOL_OP
+  ~internal_deprecated_since:rel_ely
   ()
 
 let pool_patch_pool_apply = call
@@ -4113,13 +4119,14 @@ let pool_patch_pool_apply = call
   ~in_product_since:rel_miami
   ~params:[ Ref _pool_patch, "self", "The patch to apply"]  
   ~allowed_roles:_R_POOL_OP
+  ~internal_deprecated_since:rel_ely
   ()
 
 let pool_patch =
   create_obj ~in_db:true 
     ~in_product_since:rel_miami 
     ~in_oss_since:None 
-    ~internal_deprecated_since:None
+    ~internal_deprecated_since:(Some rel_ely)
 
     ~persist:PersistEverything 
     ~gen_constructor_destructor:false 
@@ -4168,7 +4175,7 @@ let host_patch_apply = call
   ()
 
 let host_patch = 
-  create_obj ~in_db:true ~in_product_since:rel_rio ~in_oss_since:None ~internal_deprecated_since:None ~persist:PersistEverything ~gen_constructor_destructor:false ~name:_host_patch ~gen_events:true 
+  create_obj ~in_db:true ~in_product_since:rel_rio ~in_oss_since:None ~internal_deprecated_since:(Some rel_ely) ~persist:PersistEverything ~gen_constructor_destructor:false ~name:_host_patch ~gen_events:true 
     ~descr:"Represents a patch stored on a server"
     ~doccomments:[]
     ~messages_default_allowed_roles:_R_POOL_OP
@@ -4828,7 +4835,7 @@ let host =
 	field ~qualifier:RW ~ty:(Ref _sr) "suspend_image_sr" "The SR in which VDIs for suspend images are created";
 	field ~qualifier:RW ~ty:(Ref _sr) "crash_dump_sr" "The SR in which VDIs for crash dumps are created";
 	field ~in_oss_since:None ~qualifier:DynamicRO ~ty:(Set (Ref _host_crashdump)) "crashdumps" "Set of host crash dumps";
-	field ~in_oss_since:None ~qualifier:DynamicRO ~ty:(Set (Ref _host_patch)) "patches" "Set of host patches";
+	field ~in_oss_since:None ~internal_deprecated_since:rel_ely ~qualifier:DynamicRO ~ty:(Set (Ref _host_patch)) "patches" "Set of host patches";
 	field ~in_oss_since:None ~in_product_since:rel_ely ~qualifier:DynamicRO ~ty:(Set (Ref _pool_update)) "updates" "Set of updates";
 	field ~qualifier:DynamicRO ~ty:(Set (Ref _pbd)) "PBDs" "physical blockdevices";
 	field ~qualifier:DynamicRO ~ty:(Set (Ref _hostcpu)) "host_CPUs" "The physical CPUs on this host";
