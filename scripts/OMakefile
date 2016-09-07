@@ -53,6 +53,7 @@ install:
 	$(IDATA) xapi.conf $(DESTDIR)$(XAPICONF)
 	$(IDATA) sparse_dd.conf $(DESTDIR)/etc/sparse_dd.conf
 	$(IDATA) xcp-rrdd.conf $(DESTDIR)/etc/xcp-rrdd.conf
+	$(IDATA) xcp-networkd.conf $(DESTDIR)/etc/xcp-networkd.conf
 	$(IDATA) xenopsd.conf $(DESTDIR)/etc/xenopsd.conf
 	$(IDATA) squeezed.conf $(DESTDIR)/etc/squeezed.conf
 	$(IPROG) log.conf $(DESTDIR)$(ETCDIR)/log.conf

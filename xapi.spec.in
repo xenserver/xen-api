@@ -329,6 +329,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 @OPTDIR@/libexec/xcp-networkd
 /etc/rc.d/init.d/xcp-networkd
+%config(noreplace) /etc/xcp-networkd.conf
 @OPTDIR@/libexec/networkd_db
 
 %files rrdd
