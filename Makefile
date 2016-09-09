@@ -33,6 +33,7 @@ HOOKSDIR=/etc/xapi.d
 INVENTORY=/etc/xensource-inventory
 XAPICONF=/etc/xapi.conf
 RRDDCONF=/etc/xcp-rrdd.conf
+NETWORKDCONF=/etc/xcp-networkd.conf
 LIBEXECDIR=/opt/xensource/libexec
 SCRIPTSDIR=/etc/xensource/scripts
 SHAREDIR=/opt/xensource
@@ -41,7 +42,7 @@ XHADIR=/opt/xensource/xha
 BINDIR=/opt/xensource/bin
 SBINDIR=/opt/xensource/bin
 
-export VARDIR ETCDIR OPTDIR PLUGINDIR HOOKSDIR INVENTORY VARPATCHDIR LIBEXECDIR XAPICONF RRDDCONF SCRIPTSDIR SHAREDIR WEBDIR XHADIR BINDIR SBINDIR
+export VARDIR ETCDIR OPTDIR PLUGINDIR HOOKSDIR INVENTORY VARPATCHDIR LIBEXECDIR XAPICONF RRDDCONF NETWORKDCONF SCRIPTSDIR SHAREDIR WEBDIR XHADIR BINDIR SBINDIR
 
 .PHONY: all
 all: version ocaml/fhs.ml
@@ -156,6 +157,7 @@ ocaml/fhs.ml :
 	let libexecdir=\"$(LIBEXECDIR)\"\n \
 	let xapiconf=\"$(XAPICONF)\"\n \
 	let rrddconf=\"$(RRDDCONF)\"\n \
+	let networkdconf=\"$(NETWORKDCONF)\"\n \
 	let scriptsdir=\"$(SCRIPTSDIR)\"\n \
 	let varpatchdir=\"$(VARPATCHDIR)\"\n \
 	let webdir=\"$(WEBDIR)\"\n \
