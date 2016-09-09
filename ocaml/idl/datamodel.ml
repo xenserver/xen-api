@@ -8776,7 +8776,8 @@ module PVS_site = struct
       ~doc:"Introduce new PVS site"
       ~result:(Ref _pvs_site, "the new PVS site")
       ~params:
-        [ String,"name","name of the PVS site"
+        [ String, "name_label", "name of the PVS site"
+        ; String, "name_description", "description of the PVS site"
         ; String, "PVS_uuid", "unique identifier of the PVS site"
         ]
       ~lifecycle
@@ -8797,13 +8798,12 @@ module PVS_site = struct
       ~allowed_roles:_R_POOL_OP
       ()
 
-
-  let set_name = call
-      ~name:"set_name"
-      ~doc:"Update the name of the PVS site"
+  let set_PVS_uuid = call
+      ~name:"set_PVS_uuid"
+      ~doc:"Update the PVS UUID of the PVS site"
       ~params:
         [ Ref _pvs_site, "self", "this PVS site"
-        ; String, "value", "name to be used"
+        ; String, "value", "PVS UUID to be used"
         ]
       ~lifecycle
       ~allowed_roles:_R_POOL_OP
@@ -8826,9 +8826,7 @@ module PVS_site = struct
       ~contents:
         [ uid     _pvs_site ~lifecycle
 
-        ; field   ~qualifier:StaticRO ~lifecycle
-            ~ty:String "name" ~default_value:null_str
-            "Name of the PVS site. Must match name configured in PVS"
+        ; namespace ~name:"name" ~contents:(names None RW ~lifecycle) ()
 
         ; field   ~qualifier:StaticRO ~lifecycle
             ~ty:String "PVS_uuid" ~default_value:null_str
@@ -8850,7 +8848,7 @@ module PVS_site = struct
       ~messages:
         [ introduce
         ; forget
-        ; set_name
+        ; set_PVS_uuid
         ]
       ()
 end
