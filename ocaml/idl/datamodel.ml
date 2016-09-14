@@ -8743,7 +8743,8 @@ module PVS_site = struct
 		~doc:"Introduce new PVS site"
 		~result:(Ref _pvs_site, "the new PVS site")
 		~params:
-		[ String,"name","name of the PVS site"
+		[ String, "name", "name of the PVS site"
+		; String, "PVS_uuid", "unique identifier of the PVS site"
 		]
 		~lifecycle
 		~allowed_roles:_R_POOL_OP
@@ -8796,6 +8797,10 @@ module PVS_site = struct
 		          ~ty:String "name" ~default_value:null_str
 		          "Name of the PVS site. Must match name configured in PVS"
 
+		; field   ~qualifier:StaticRO ~lifecycle
+		          ~ty:String "PVS_uuid" ~default_value:null_str
+		          "Unique identifier of the PVS site, as configured in PVS"
+
 		; field   ~qualifier:DynamicRO ~lifecycle
 		          ~ty:(Set (Ref _pvs_cache_storage)) "cache_storage" ~default_value:null_set
 		          ~ignore_foreign_key:true
@@ -8804,7 +8809,6 @@ module PVS_site = struct
 		; field   ~qualifier:DynamicRO ~lifecycle
 		          ~ty:(Set (Ref _pvs_server)) "servers"
 		          "The set of PVS servers in the site"
-
 
 		; field   ~qualifier:DynamicRO ~lifecycle
 		          ~ty:(Set (Ref _pvs_proxy)) "proxies"
