@@ -59,7 +59,7 @@ let metadata_of_site ~__context ~site ~vdi ~proxies =
 	in
 	let vdi = Db.VDI.get_uuid ~__context ~self:vdi in
 	PVS_proxy.{
-		site_uuid = site_rc.API.pVS_site_uuid;
+		site_uuid = site_rc.API.pVS_site_PVS_uuid;
 		site_name = site_rc.API.pVS_site_name_label;
 		servers;
 		clients;
