@@ -4580,7 +4580,7 @@ let network_attach_for_vm = call
 	]
 	~in_product_since:rel_tampa
 	~hide_from_docs:true
-	~allowed_roles:_R_POOL_OP
+	~allowed_roles:_R_VM_POWER_ADMIN
 	()
 
 let network_detach_for_vm = call
@@ -4592,7 +4592,7 @@ let network_detach_for_vm = call
 	]
 	~in_product_since:rel_tampa
 	~hide_from_docs:true
-	~allowed_roles:_R_POOL_OP
+	~allowed_roles:_R_VM_POWER_ADMIN
 	()
 
 (** A virtual network *)
