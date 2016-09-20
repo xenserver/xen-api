@@ -98,24 +98,27 @@ let update_site_on_localhost ~__context ~site ~vdi ?(starting_proxies=[]) ?(stop
     ) running_proxies in
   let proxies = starting_proxies @ (List.set_difference local_running_proxies stopping_proxies) |> List.setify in
   let proxy_config = metadata_of_site ~__context ~site ~vdi ~proxies in
-  if proxy_config.clients <> [] then
-    Network.Net.PVS_proxy.configure_site dbg proxy_config
-  else
-    let uuid = Db.PVS_site.get_PVS_uuid ~__context ~self:site in
-    Network.Net.PVS_proxy.remove_site dbg uuid;
+  Network.Net.PVS_proxy.configure_site dbg proxy_config;
 
-    (* Ensure that OVS ports for the proxy daemon are removed if they are no longer used *)
-    List.iter
-      (fun (vif, _) ->
-         let network = Db.VIF.get_network ~__context ~self:vif in
-         let bridge = Db.Network.get_bridge ~__context ~self:network in
-         let port_name = proxy_port_name bridge in
-         let active_ports = List.map (fun client -> client.Client.interface) proxy_config.clients in
-         if not (List.mem port_name active_ports) then
-           Network.Net.Bridge.remove_port dbg ~bridge ~name:port_name
-      )
-      stopping_proxies
+  (* Ensure that OVS ports for the proxy daemon are removed if they are no longer used *)
+  List.iter
+    (fun (vif, _) ->
+       let network = Db.VIF.get_network ~__context ~self:vif in
+       let bridge = Db.Network.get_bridge ~__context ~self:network in
+       let port_name = proxy_port_name bridge in
+       let active_ports = List.map (fun client -> client.Client.interface) proxy_config.clients in
+       if not (List.mem port_name active_ports) then
+         Network.Net.Bridge.remove_port dbg ~bridge ~name:port_name
+    )
+    stopping_proxies
 
+(** Request xcp-networkd to tell the local PVS-proxy daemon that it must stop
+ *  proxying for the given site, and release the associated cache VDI. *)
+let remove_site_on_localhost ~__context ~site =
+  let open Network_interface.PVS_proxy in
+  let dbg = Context.string_of_task __context in
+  let uuid = Db.PVS_site.get_PVS_uuid ~__context ~self:site in
+  Network.Net.PVS_proxy.remove_site dbg uuid
 
 exception No_cache_sr_available
 
@@ -177,22 +180,20 @@ let start_proxy ~__context vif proxy =
     false
 
 let stop_proxy ~__context vif proxy =
-  if Db.PVS_proxy.get_currently_attached ~__context ~self:proxy then begin
-    try
-      let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
-      let host = Helpers.get_localhost ~__context in
-      let vdi = find_cache_vdi ~__context ~host ~site in
-      update_site_on_localhost ~__context ~site ~vdi ~stopping_proxies:[vif, proxy] ();
-      Db.PVS_proxy.set_status ~__context ~self:proxy ~value:`stopped
-    with e ->
-      let reason =
-        match e with
-        | No_cache_sr_available -> "no PVS cache VDI found"
-        | Network_interface.PVS_proxy_connection_error -> "unable to connect to PVS proxy daemon"
-        | _ -> Printf.sprintf "unknown error (%s)" (Printexc.to_string e)
-      in
-      error "Unable to disable PVS proxy for VIF %s: %s." (Ref.string_of vif) reason
-  end
+  try
+    let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
+    let host = Helpers.get_localhost ~__context in
+    let vdi = find_cache_vdi ~__context ~host ~site in
+    update_site_on_localhost ~__context ~site ~vdi ~stopping_proxies:[vif, proxy] ();
+    Db.PVS_proxy.set_status ~__context ~self:proxy ~value:`stopped
+  with e ->
+    let reason =
+      match e with
+      | No_cache_sr_available -> "no PVS cache VDI found"
+      | Network_interface.PVS_proxy_connection_error -> "unable to connect to PVS proxy daemon"
+      | _ -> Printf.sprintf "unknown error (%s)" (Printexc.to_string e)
+    in
+    error "Unable to disable PVS proxy for VIF %s: %s." (Ref.string_of vif) reason
 
 let find_proxy_for_vif ~__context ~vif =
   let open Db_filter_types in
