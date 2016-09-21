@@ -10,7 +10,8 @@ import os
 import fasteners
 import errno
 import shutil
-
+import logging
+import xcp.logger
 
 UPDATE_DIR = '/var/update/'
 TMP_DIR = '/tmp/'
@@ -18,7 +19,6 @@ PATCH_ALREADY_APPLIED = 'PATCH_ALREADY_APPLIED'
 PATCH_APPLY_FAILED = 'PATCH_APPLY_FAILED'
 OTHER_OPERATION_IN_PROGRESS = 'OTHER_OPERATION_IN_PROGRESS'
 PATCH_PRECHECK_FAILED_UNKNOWN_ERROR = 'PATCH_PRECHECK_FAILED_UNKNOWN_ERROR'
-FIST_FILE = '/tmp/fist_allowed_unsigned_updates'
 
 
 class ApplyFailure(Exception):
@@ -36,16 +36,25 @@ def failure_message(code, params):
     return xmlrpclib.dumps((rpcparams, ), '', True)
 
 
-def execute_apply(session, update_package, yum_conf_file, nogpgcheck):
-    FNULL = open(os.devnull, 'w')
-    retcode = subprocess.call('yum -c ' + yum_conf_file + ' install -y ' +
-                              nogpgcheck + update_package, shell=True, stdout=FNULL, stderr=FNULL)
-    if retcode != 0:
-        raise ApplyFailure(
-            'Failed to install update_package (%r).' % update_package)
+def execute_apply(session, update_package, yum_conf_file):
+    cmd = ['yum', 'install', '-y', '--noplugins', '-c', yum_conf_file, update_package]
+    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+    p.wait()
+    output = p.stdout.read()
+    xcp.logger.info('pool_update.apply %r returncode=%r output=%r', cmd, p.returncode, output)
+    if p.returncode != 0:
+        lines = output.splitlines()
+        errorlines = [l for l in lines if l.startswith('Error: ')]
+        if errorlines:
+            errmsg = errorlines[-1].split(':', 1)[-1].strip()
+        else:
+            errmsg = lines[-1]
+        raise PrecheckFailure(
+            'Install %s error: %s' % (update_package, errmsg))
 
 
 if __name__ == '__main__':
+    xcp.logger.logToSyslog(level=logging.INFO)
     txt = sys.stdin.read()
     params, method = xmlrpclib.loads(txt)
 
@@ -81,14 +90,12 @@ if __name__ == '__main__':
         try:
             session.xenapi.pool_update.precheck(update, host)
         except Exception as e:
-            print(
-                failure_message(PATCH_PRECHECK_FAILED_UNKNOWN_ERROR, ['%s' % str(e)]))
+            try:
+                errors = json.loads(str(e))
+                print(failure_message(errors[0], errors[1:]))
+            except:
+                print(failure_message(PATCH_PRECHECK_FAILED_UNKNOWN_ERROR, [str(e)]))
             sys.exit(0)
-
-        allow_unsigned = False
-        if os.path.isfile(FIST_FILE):
-            allow_unsigned = update_uuid in open(FIST_FILE, 'rb').read().split()
-        nogpgcheck = ' --nogpgcheck ' if allow_unsigned else ' '
 
         # Apply the update.
         try:
@@ -103,7 +110,7 @@ if __name__ == '__main__':
             with open (yum_conf_file, "w+") as file:
                 file.write("{0}".format(yum_conf))
 
-            execute_apply(session, update_package, yum_conf_file, nogpgcheck)
+            execute_apply(session, update_package, yum_conf_file)
 
             session.xenapi.pool_update.resync_host(host)
             print(success_message())
