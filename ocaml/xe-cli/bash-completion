@@ -104,13 +104,13 @@ _xe()
                         cmd=host-list;;
                     pvs-cache-storage-*)
                         # Chop off at the third '-' and append 'list'
-                        cmd=$(echo ${OLDSTYLE_WORDS[1]} | cut -d- -f1-3)-list;;
+                        cmd="$(echo ${OLDSTYLE_WORDS[1]} | cut -d- -f1-3)-list";;
                     host-cpu-*|host-crashdump-*|gpu-group-*|vgpu-type-*|pvs-server-*|pvs-proxy-*|pvs-site-*)
                         # Chop off at the second '-' and append 'list'
-                        cmd=$(echo ${OLDSTYLE_WORDS[1]} | cut -d- -f1-2)-list;;
+                        cmd="$(echo ${OLDSTYLE_WORDS[1]} | cut -d- -f1-2)-list";;
                     *)
                         # Chop off at the first '-' and append 'list' (works for e.g. 'pif-param-get uuid=<tab>')
-                        cmd=$(echo ${OLDSTYLE_WORDS[1]} | cut -d- -f1)-list;;
+                        cmd="$(echo ${OLDSTYLE_WORDS[1]} | cut -d- -f1)-list";;
                 esac
                 IFS=$'\n,'
                 set_completions_for_names "$cmd" 'uuid' "$value"
