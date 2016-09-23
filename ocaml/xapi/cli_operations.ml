@@ -4284,34 +4284,20 @@ let patch_upload fd printer rpc session_id params =
 	let patch_uuid = Client.Pool_patch.get_uuid rpc session_id patch_ref in
 	marshal fd (Command (Print patch_uuid))
 
-let update_upload fd printer rpc session_id params =
-	let filename = List.assoc "file-name" params in
-	let host_uuid = List.assoc "host-uuid" params in
-	let host = Client.Host.get_by_uuid rpc session_id host_uuid in
-	let make_command task_id =
-		let prefix = uri_of_someone rpc session_id (SpecificHost host) in
-		let uri = Printf.sprintf "%s%s?session_id=%s&task_id=%s"
-			prefix Constants.oem_patch_stream_uri (Ref.string_of session_id) (Ref.string_of task_id) in
-		let _ = debug "trying to post patch to uri:%s" uri in
-		HttpPut (filename, uri)
-	in
-	let result = track_http_operation fd rpc session_id make_command "host patch upload" in
-	marshal fd (Command (Print result))
-
 let patch_clean printer rpc session_id params =
 	let uuid = List.assoc "uuid" params in
-	let patch_ref = Client.Pool_patch.get_by_uuid rpc session_id uuid in
-	Client.Pool_patch.clean rpc session_id patch_ref
+	let update_ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+	Client.Pool_update.pool_clean rpc session_id update_ref
 
 let patch_pool_clean printer rpc session_id params =
 	let uuid = List.assoc "uuid" params in
-	let patch_ref = Client.Pool_patch.get_by_uuid rpc session_id uuid in
-	Client.Pool_patch.pool_clean rpc session_id patch_ref
+	let update_ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+	Client.Pool_update.pool_clean rpc session_id update_ref
 
 let patch_destroy printer rpc session_id params =
 	let uuid = List.assoc "uuid" params in
-	let patch_ref = Client.Pool_patch.get_by_uuid rpc session_id uuid in
-	Client.Pool_patch.destroy rpc session_id patch_ref
+	let update_ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+	Client.Pool_update.destroy rpc session_id update_ref
 
 let patch_apply printer rpc session_id params =
 	let patch_uuid = List.assoc "uuid" params in
@@ -4322,17 +4308,16 @@ let patch_apply printer rpc session_id params =
 	printer (Cli_printer.PList [ result ])
 
 let patch_precheck printer rpc session_id params =
-	let patch_uuid = List.assoc "uuid" params in
+	let update_uuid = List.assoc "uuid" params in
 	let host_uuid = List.assoc "host-uuid" params in
-	let patch_ref = Client.Pool_patch.get_by_uuid rpc session_id patch_uuid in
+	let update_ref = Client.Pool_update.get_by_uuid rpc session_id update_uuid in
 	let host_ref  = Client.Host.get_by_uuid rpc session_id host_uuid in
-	let result = Client.Pool_patch.precheck rpc session_id patch_ref host_ref in
-	printer (Cli_printer.PList [ result ])
+	Client.Pool_update.precheck rpc session_id update_ref host_ref
 
 let patch_pool_apply printer rpc session_id params =
-	let patch_uuid = List.assoc "uuid" params in
-	let patch_ref = Client.Pool_patch.get_by_uuid rpc session_id patch_uuid in
-	Client.Pool_patch.pool_apply rpc session_id patch_ref
+	let uuid = List.assoc "uuid" params in
+	let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+	Client.Pool_update.pool_apply rpc session_id ref
 
 let host_logs_download fd printer rpc session_id params =
 	let op n host =

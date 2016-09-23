@@ -851,15 +851,6 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "update-upload",
-    {
-      reqd=["file-name"; "host-uuid"];
-      optn=[];
-      help="Stream new update to the server.";
-      implementation=With_fd Cli_operations.update_upload;
-      flags=[];
-    };    
-
    "patch-precheck",
     {
       reqd=["uuid"; "host-uuid"];
