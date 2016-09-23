@@ -14,6 +14,7 @@
 
 open Stdext
 open Listext
+open Threadext
 
 module D = Debug.Make(struct let name = "xapi_pvs_proxy_control" end)
 open D
@@ -30,6 +31,81 @@ let get_running_proxies ~__context ~site =
          ((Eq (Field "site", Literal (Ref.string_of site)))
          ,(Eq (Field "currently_attached", Literal "true"))
          ))
+
+(* A module to update and query the state of the proxies on the local host *)
+module State = struct
+  type t = Starting | Started | Stopping | Failed
+
+  open Xenstore
+
+  let of_string = function
+    | "starting" -> Starting
+    | "started" -> Started
+    | "stopping" -> Stopping
+    | "failed" -> Failed
+    | _ -> failwith "unknown proxy state"
+
+  let string_of = function
+    | Starting -> "starting"
+    | Started -> "started"
+    | Stopping -> "stopping"
+    | Failed -> "failed"
+
+  let (//) = Filename.concat
+  let root = "/xapi/pvs-proxy"
+  let _state = "state"
+  let _proxy_uuid = "proxy-uuid"
+
+  (*
+    For each proxy, we have the following xenstore entries:
+
+    /xapi/pvs-proxy/<site-uuid>/<vif-uuid>/state = <state>
+    /xapi/pvs-proxy/<site-uuid>/<vif-uuid>/proxy-uuid = <proxy-uuid>
+  *)
+
+  let mark_proxy ~__context site vif proxy state =
+    let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
+    let vif_uuid = Db.VIF.get_uuid ~__context ~self:vif in
+    let proxy_uuid = Db.PVS_proxy.get_uuid ~__context ~self:proxy in
+    with_xs (fun xs ->
+      let dir = root // site_uuid // vif_uuid in
+      xs.Xs.write (dir // _state) (string_of state);
+      xs.Xs.write (dir // _proxy_uuid) proxy_uuid
+    )
+
+  let remove_proxy ~__context site vif =
+    let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
+    let vif_uuid = Db.VIF.get_uuid ~__context ~self:vif in
+    with_xs (fun xs ->
+      let dir = root // site_uuid // vif_uuid in
+      xs.Xs.rm dir
+    )
+
+  let remove_site ~__context site =
+    let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
+    with_xs (fun xs ->
+      xs.Xs.rm (root // site_uuid)
+    )
+
+  let get_running_proxies ~__context site =
+    let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
+    with_xs (fun xs ->
+      xs.Xs.directory (root // site_uuid) |>
+      List.filter_map (fun vif_uuid ->
+        try
+          let dir = root // site_uuid // vif_uuid in
+          let state = of_string (xs.Xs.read (dir // _state)) in
+          if state = Starting || state = Started then
+            let proxy_uuid = xs.Xs.read (dir // _proxy_uuid) in
+            let vif = Db.VIF.get_by_uuid ~__context ~uuid:vif_uuid in
+            let proxy = Db.PVS_proxy.get_by_uuid ~__context ~uuid:proxy_uuid in
+            Some (vif, proxy)
+          else
+            None
+        with _ -> None
+      )
+    )
+end
 
 let metadata_of_site ~__context ~site ~vdi ~proxies =
   let open Network_interface in
@@ -65,6 +141,8 @@ let metadata_of_site ~__context ~site ~vdi ~proxies =
     vdi;
   }
 
+let configure_proxy_m = Mutex.create ()
+
 (** Request xcp-networkd to update a site's PVS-proxy daemon configuration,
  *  for all locally running proxies, taking into account starting and stopping proxies *)
 let update_site_on_localhost ~__context ~site ~vdi ?(starting_proxies=[]) ?(stopping_proxies=[]) () =
@@ -86,19 +164,14 @@ let update_site_on_localhost ~__context ~site ~vdi ?(starting_proxies=[]) ?(stop
     )
     starting_proxies;
 
-  let running_proxies = get_running_proxies ~__context ~site in
-  let localhost = Helpers.get_localhost ~__context in
-  let local_running_proxies = List.filter_map (fun proxy ->
-      let vif = Db.PVS_proxy.get_VIF ~__context ~self:proxy in
-      let vm = Db.VIF.get_VM ~__context ~self:vif in
-      if Db.VM.get_resident_on ~__context ~self:vm = localhost then
-        Some (vif, proxy)
-      else
-        None
-    ) running_proxies in
-  let proxies = starting_proxies @ (List.set_difference local_running_proxies stopping_proxies) |> List.setify in
-  let proxy_config = metadata_of_site ~__context ~site ~vdi ~proxies in
-  Network.Net.PVS_proxy.configure_site dbg proxy_config;
+  let clients =
+    Mutex.execute configure_proxy_m (fun () ->
+      let proxies = State.get_running_proxies ~__context site in
+      let proxy_config = metadata_of_site ~__context ~site ~vdi ~proxies in
+      Network.Net.PVS_proxy.configure_site dbg proxy_config;
+      proxy_config.clients
+    )
+  in
 
   (* Ensure that OVS ports for the proxy daemon are removed if they are no longer used *)
   List.iter
@@ -106,7 +179,7 @@ let update_site_on_localhost ~__context ~site ~vdi ?(starting_proxies=[]) ?(stop
        let network = Db.VIF.get_network ~__context ~self:vif in
        let bridge = Db.Network.get_bridge ~__context ~self:network in
        let port_name = proxy_port_name bridge in
-       let active_ports = List.map (fun client -> client.Client.interface) proxy_config.clients in
+       let active_ports = List.map (fun client -> client.Client.interface) clients in
        if not (List.mem port_name active_ports) then
          Network.Net.Bridge.remove_port dbg ~bridge ~name:port_name
     )
@@ -118,7 +191,9 @@ let remove_site_on_localhost ~__context ~site =
   let open Network_interface.PVS_proxy in
   let dbg = Context.string_of_task __context in
   let uuid = Db.PVS_site.get_uuid ~__context ~self:site in
-  Network.Net.PVS_proxy.remove_site dbg uuid
+  Mutex.execute configure_proxy_m (fun () ->
+    Network.Net.PVS_proxy.remove_site dbg uuid
+  )
 
 exception No_cache_sr_available
 
@@ -136,13 +211,15 @@ let find_cache_vdi ~__context ~host ~site =
     Db.PVS_cache_storage.get_VDI ~__context ~self:pcs
 
 let start_proxy ~__context vif proxy =
+  let host = Helpers.get_localhost ~__context in
+  let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
   try
     Pool_features.assert_enabled ~__context ~f:Features.PVS_proxy;
     Helpers.assert_using_vswitch ~__context;
-    let host = Helpers.get_localhost ~__context in
-    let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
     let vdi = find_cache_vdi ~__context ~host ~site in
+    State.mark_proxy ~__context site vif proxy State.Starting;
     update_site_on_localhost ~__context ~site ~vdi ~starting_proxies:[vif, proxy] ();
+    State.mark_proxy ~__context site vif proxy State.Started;
     Db.PVS_proxy.set_status ~__context ~self:proxy ~value:`initialised;
     true
   with e ->
@@ -176,6 +253,7 @@ let start_proxy ~__context vif proxy =
         "Host is not using openvswitch"
       | _ -> Printf.sprintf "unknown error (%s)" (Printexc.to_string e)
     in
+    State.mark_proxy ~__context site vif proxy State.Failed;
     warn "Unable to enable PVS proxy for VIF %s: %s. Continuing with proxy unattached." (Ref.string_of vif) reason;
     false
 
@@ -184,7 +262,9 @@ let stop_proxy ~__context vif proxy =
     let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
     let host = Helpers.get_localhost ~__context in
     let vdi = find_cache_vdi ~__context ~host ~site in
+    State.mark_proxy ~__context site vif proxy State.Stopping;
     update_site_on_localhost ~__context ~site ~vdi ~stopping_proxies:[vif, proxy] ();
+    State.remove_proxy ~__context site vif;
     Db.PVS_proxy.set_status ~__context ~self:proxy ~value:`stopped
   with e ->
     let reason =
