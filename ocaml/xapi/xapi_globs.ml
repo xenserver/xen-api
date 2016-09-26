@@ -830,10 +830,9 @@ let xapi_globs_spec =
 	]
 
 let xapi_globs_conf = "/etc/xensource/xapi_globs.conf"
-let ciphersuites_good_outbound = ref (Some "")
-let _ = (ciphersuites_good_outbound := None)
+let ciphersuites_good_outbound = ref "!EXPORT:RSA+AES128-SHA256"
 
-let ciphersuites_legacy_outbound = ref ""
+let ciphersuites_legacy_outbound = ref "RSA+AES256-SHA:RSA+AES128-SHA:RSA+RC4-SHA:RSA+DES-CBC3-SHA"
 
 let read_external_config () =
 	let unknown_key k v = D.warn "Unknown key/value pairs: (%s, %s)" k v in
