@@ -41,7 +41,7 @@ let read_config filename =
 		cgo, Config.String (fun s ->
 			D.debug "Processing config %s=%s" cgo s;
 			Xapi_globs.ciphersuites_good_outbound :=
-				(if String.filter_chars s (not ++ String.isspace) <> "" then Some s else None)
+				(if String.filter_chars s (not ++ String.isspace) <> "" then s else "")
 		));
 		"ciphersuites-legacy-outbound", Config.Set_string Xapi_globs.ciphersuites_legacy_outbound;
 	] in
