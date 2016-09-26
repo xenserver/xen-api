@@ -906,8 +906,8 @@ let xenopsd_queues = ref ([
 
 let default_xenopsd = ref "org.xen.xapi.xenops.xenlight"
 
-let ciphersuites_good_outbound = ref None
-let ciphersuites_legacy_outbound = ref ""
+let ciphersuites_good_outbound = ref "!EXPORT:RSA+AES128-SHA256"
+let ciphersuites_legacy_outbound = ref "RSA+AES256-SHA:RSA+AES128-SHA:RSA+RC4-SHA:RSA+DES-CBC3-SHA"
 
 (* Fingerprint of default patch key *)
 let citrix_patch_key = "NERDNTUzMDMwRUMwNDFFNDI4N0M4OEVCRUFEMzlGOTJEOEE5REUyNg=="
@@ -994,8 +994,8 @@ let other_options = [
   "cluster-stack-default", Arg.Set_string cluster_stack_default,
     (fun () -> !cluster_stack_default), "Default cluster stack (HA)";
 
-  "ciphersuites-good-outbound", Arg.String (fun s -> ciphersuites_good_outbound := if String_plain.trim s <> "" then Some s else None),
-    (fun () -> match !ciphersuites_good_outbound with None -> "" | Some s -> s),
+  "ciphersuites-good-outbound", Arg.String (fun s -> ciphersuites_good_outbound := if String_plain.trim s <> "" then s else ""),
+    (fun () -> !ciphersuites_good_outbound),
     "Preferred set of ciphersuites for outgoing TLS connections. (This list must match, or at least contain one of, the GOOD_CIPHERS in the 'xapissl' script for starting the listening stunnel.)";
 
   "ciphersuites-legacy-outbound", Arg.Set_string ciphersuites_legacy_outbound,
