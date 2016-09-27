@@ -380,8 +380,8 @@ module MD = struct
     }
 
   let of_pvs_proxy ~__context vif proxy =
-    let bridge = Db.Network.get_bridge ~__context ~self:vif.API.vIF_network in
     let site = Db.PVS_proxy.get_site ~__context ~self:proxy in
+    let site_uuid = Db.PVS_site.get_uuid ~__context ~self:site in
     let servers = Db.PVS_site.get_servers ~__context ~self:site in
     let servers =
       List.map (fun server ->
@@ -393,8 +393,8 @@ module MD = struct
           }
         ) servers
     in
-    let interface = Pvs_proxy_control.proxy_port_name bridge in
-    servers, interface
+    let interface = Pvs_proxy_control.proxy_port_name vif in
+    site_uuid, servers, interface
 
   let of_vif ~__context ~vm ~vif:(vif_ref, vif) =
     let net = Db.Network.get_record ~__context ~self:vif.API.vIF_network in
@@ -1687,7 +1687,10 @@ let update_vif ~__context id =
                 | None -> ()
                 | Some proxy ->
                   debug "xenopsd event: Updating PVS_proxy for VIF %s.%s currently_attached <- %b" (fst id) (snd id) state.pvs_rules_active;
-                  Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:state.pvs_rules_active
+                  if state.pvs_rules_active then
+                    Db.PVS_proxy.set_currently_attached ~__context ~self:proxy ~value:true
+                  else
+                    Pvs_proxy_control.clear_proxy_state ~__context vif proxy
                );
                debug "xenopsd event: Updating VIF %s.%s currently_attached <- %b" (fst id) (snd id) (state.plugged || state.active);
                Db.VIF.set_currently_attached ~__context ~self:vif ~value:(state.plugged || state.active)
