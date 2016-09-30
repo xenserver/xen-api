@@ -165,6 +165,7 @@ let with_api_errors f x =
    ${signed:+gpgkey=file:///etc/pki/rpm-gpg/key}
 *)
 let create_yum_config ~__context ~self ~url =
+  debug "pool_update.create_yum_config";
   let key = Db.Pool_update.get_key ~__context ~self in
   let signed = String.length key <> 0 in
   let signed_index = if signed then 1 else 0 in
@@ -374,7 +375,8 @@ let pool_clean ~__context ~self =
   debug "pool_update.pool_clean %s" pool_update_name;
   detach ~__context ~self;
   let vdi = Db.Pool_update.get_vdi ~__context ~self in
-  Db.VDI.destroy ~__context ~self:vdi
+  Db.VDI.destroy ~__context ~self:vdi;
+  Db.Pool_update.set_vdi ~__context ~self ~value:Ref.null
 
 let destroy ~__context ~self =
   let pool_update_name = Db.Pool_update.get_name_label ~__context ~self in
@@ -389,8 +391,9 @@ let destroy ~__context ~self =
 let detach_attached_updates __context =
   Db.Pool_update.get_all ~__context |>
   List.iter ( fun self ->
-      ignore(Helpers.call_api_functions ~__context
-               (fun rpc session_id -> Client.Pool_update.detach ~rpc ~session_id ~self))
+      Helpers.log_exn_continue ("detach_attached_updates: update_uuid " ^ (Db.Pool_update.get_uuid ~__context ~self))
+      (fun () -> ignore(Helpers.call_api_functions ~__context
+               (fun rpc session_id -> Client.Pool_update.detach ~rpc ~session_id ~self))) ()
     )
 
 let resync_host ~__context ~host =
