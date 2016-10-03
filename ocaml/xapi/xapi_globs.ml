@@ -14,6 +14,7 @@
 
 (** A central location for settings related to xapi *)
 
+module String_plain = String (* For when we don't want the Xstringext version *)
 open Stringext
 open Printf
 
@@ -730,7 +731,7 @@ let redo_log_max_startup_time = ref 5.
 (** The delay between each attempt to connect to the block device I/O process *)
 let redo_log_connect_delay = ref 0.1
 
-let gpumon_stop_timeout = ref 10.0
+let gpumon_stop_timeout = ref 60.0
 
 (* Fingerprint of default patch key *)
 let citrix_patch_key = "NERDNTUzMDMwRUMwNDFFNDI4N0M4OEVCRUFEMzlGOTJEOEE5REUyNg=="
@@ -829,6 +830,9 @@ let xapi_globs_spec =
 	]
 
 let xapi_globs_conf = "/etc/xensource/xapi_globs.conf"
+let ciphersuites_good_outbound = ref "!EXPORT:RSA+AES128-SHA256"
+
+let ciphersuites_legacy_outbound = ref "RSA+AES256-SHA:RSA+AES128-SHA:RSA+RC4-SHA:RSA+DES-CBC3-SHA"
 
 let read_external_config () =
 	let unknown_key k v = D.warn "Unknown key/value pairs: (%s, %s)" k v in

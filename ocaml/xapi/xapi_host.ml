@@ -565,7 +565,7 @@ let is_host_alive ~__context ~host =
 	false
   end
 
-let create ~__context ~uuid ~name_label ~name_description ~hostname ~address ~external_auth_type ~external_auth_service_name ~external_auth_configuration ~license_params ~edition ~license_server ~local_cache_sr ~chipset_info =
+let create ~__context ~uuid ~name_label ~name_description ~hostname ~address ~external_auth_type ~external_auth_service_name ~external_auth_configuration ~license_params ~edition ~license_server ~local_cache_sr ~chipset_info ~ssl_legacy =
 
   let make_new_metrics_object ref =
 	Db.Host_metrics.create ~__context ~ref
@@ -606,6 +606,7 @@ let create ~__context ~uuid ~name_label ~name_description ~hostname ~address ~ex
 	~power_on_mode:""
 	~power_on_config:[]
 	~local_cache_sr
+	~ssl_legacy
 	~guest_VCPUs_params:[]
 	~display:`enabled
 	~virtual_hardware_platform_versions:(if host_is_us then Xapi_globs.host_virtual_hardware_platform_versions else [0L])
@@ -892,6 +893,29 @@ let set_hostname_live ~__context ~host ~hostname =
   Debug.invalidate_hostname_cache ();
   Db.Host.set_hostname ~__context ~self:host ~value:hostname
   )
+
+let m_ssl_legacy = Mutex.create ()
+
+let set_stunnel_legacy ~__context legacy =
+	debug "Setting stunnel legacy runtime config to %b" legacy;
+	Stunnel.set_legacy_protocol_and_ciphersuites_allowed legacy;
+	debug "Resetting long running stunnel clients e.g. master connection";
+	Master_connection.force_connection_reset ();
+	debug "Resetting long running stunnel server proxy";
+	Xapi_mgmt_iface.reconfigure_stunnel ~__context;
+	info "Updating stunnel legacy inventory to %b." legacy;
+	Xapi_inventory.update Xapi_inventory._stunnel_legacy (string_of_bool legacy)
+
+let set_ssl_legacy ~__context ~self ~value =
+	(* Use the mutex to ensure inventory and DB are consistent. *)
+	Mutex.execute m_ssl_legacy (fun () ->
+		let old = Db.Host.get_ssl_legacy ~__context ~self in
+		if old <> value then (
+			info "set_ssl_legacy %B where old=%B" value old;
+			Db.Host.set_ssl_legacy ~__context ~self ~value;
+			set_stunnel_legacy ~__context value
+		)
+	)
 
 let is_in_emergency_mode ~__context =
   !Xapi_globs.slave_emergency_mode

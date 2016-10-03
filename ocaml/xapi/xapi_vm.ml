@@ -197,14 +197,11 @@ let start ~__context ~vm ~start_paused ~force =
 
 	(* If the VM has any vGPUs, gpumon must remain stopped until the
 	 * VM has started. *)
-	begin
-		match vmr.API.vM_VGPUs with
-		| [] -> Xapi_xenops.start ~__context ~self:vm start_paused
-		| _ ->
-			Xapi_gpumon.with_gpumon_stopped ~timeout:!Xapi_globs.gpumon_stop_timeout
-				(fun () -> Xapi_xenops.start ~__context ~self:vm start_paused)
-	end;
-	Xapi_vm_helpers.start_delay ~__context ~vm
+	match vmr.API.vM_VGPUs with
+	| [] -> Xapi_xenops.start ~__context ~self:vm start_paused
+	| _ ->
+		Xapi_gpumon.with_gpumon_stopped ~timeout:!Xapi_globs.gpumon_stop_timeout
+			(fun () -> Xapi_xenops.start ~__context ~self:vm start_paused)
 
 (** For VM.start_on and VM.resume_on the message forwarding layer should only forward here
     if 'host' = localhost *)
