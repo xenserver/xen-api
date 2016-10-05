@@ -82,52 +82,52 @@ let updates_to_attach_count_tbl : (string, int) Hashtbl.t = Hashtbl.create 10
 let updates_to_attach_count_tbl_mutex = Mutex.create ()
 
 let with_dec_refcount ~__context ~uuid ~vdi f =
-  Mutex.execute updates_to_attach_count_tbl_mutex 
-  ( fun () ->
-    let count = try Hashtbl.find updates_to_attach_count_tbl uuid with _ -> 0 in
-    debug "pool_update.detach_helper '%s' count=%d" uuid count;
-    if count <= 1 then begin
-      f ~__context ~uuid ~vdi
-    end;
-    if count > 1 then
-      Hashtbl.replace updates_to_attach_count_tbl uuid (count - 1)
-    else if count = 1 then
-      Hashtbl.remove updates_to_attach_count_tbl uuid
-  )
+  Mutex.execute updates_to_attach_count_tbl_mutex
+    ( fun () ->
+        let count = try Hashtbl.find updates_to_attach_count_tbl uuid with _ -> 0 in
+        debug "pool_update.detach_helper '%s' count=%d" uuid count;
+        if count <= 1 then begin
+          f ~__context ~uuid ~vdi
+        end;
+        if count > 1 then
+          Hashtbl.replace updates_to_attach_count_tbl uuid (count - 1)
+        else if count = 1 then
+          Hashtbl.remove updates_to_attach_count_tbl uuid
+    )
 
 let with_inc_refcount ~__context ~uuid ~vdi f =
-  Mutex.execute updates_to_attach_count_tbl_mutex 
-  ( fun () ->
-    let count = try Hashtbl.find updates_to_attach_count_tbl uuid with _ -> 0 in
-    debug "pool_update.attach_helper refcount='%d'" (count);
-    if count = 0 then begin
-      f ~__context ~uuid ~vdi
-    end;
-    Hashtbl.replace updates_to_attach_count_tbl uuid (count + 1)
-  )
+  Mutex.execute updates_to_attach_count_tbl_mutex
+    ( fun () ->
+        let count = try Hashtbl.find updates_to_attach_count_tbl uuid with _ -> 0 in
+        debug "pool_update.attach_helper refcount='%d'" (count);
+        if count = 0 then begin
+          f ~__context ~uuid ~vdi
+        end;
+        Hashtbl.replace updates_to_attach_count_tbl uuid (count + 1)
+    )
 
 let detach_helper ~__context ~uuid ~vdi =
   with_dec_refcount ~__context ~uuid ~vdi
     (fun ~__context ~uuid ~vdi ->
-      let mount_point_parent_dir = String.concat "/" [Xapi_globs.host_update_dir; uuid] in
-      let mount_point = Filename.concat mount_point_parent_dir "vdi" in
-      debug "pool_update.detach_helper %s from %s" uuid mount_point;
-      if try Sys.is_directory mount_point with _ -> false then begin
-        Helpers.log_exn_continue ("detach_helper: unmounting " ^ mount_point)
-            (fun () -> umount mount_point) ()
-      end;
-      Helpers.call_api_functions ~__context (fun rpc session_id ->
-          let dom0 = Helpers.get_domain_zero ~__context in
-          let vbds = Client.VDI.get_VBDs ~rpc ~session_id ~self:vdi in
-          List.iter (fun self -> 
-            if Client.VBD.get_VM ~rpc ~session_id ~self = dom0 then begin
-              Client.VBD.unplug ~rpc ~session_id ~self;
-              Client.VBD.destroy ~rpc ~session_id ~self
-            end) vbds);
-      if try Sys.is_directory mount_point_parent_dir with _ -> false then begin
-        let output, _ = Forkhelpers.execute_command_get_output "/bin/rm" ["-r"; mount_point_parent_dir] in
-        debug "pool_update.detach_helper Mountpoint removed (output=%s)" output
-      end;
+       let mount_point_parent_dir = String.concat "/" [Xapi_globs.host_update_dir; uuid] in
+       let mount_point = Filename.concat mount_point_parent_dir "vdi" in
+       debug "pool_update.detach_helper %s from %s" uuid mount_point;
+       if try Sys.is_directory mount_point with _ -> false then begin
+         Helpers.log_exn_continue ("detach_helper: unmounting " ^ mount_point)
+           (fun () -> umount mount_point) ()
+       end;
+       Helpers.call_api_functions ~__context (fun rpc session_id ->
+           let dom0 = Helpers.get_domain_zero ~__context in
+           let vbds = Client.VDI.get_VBDs ~rpc ~session_id ~self:vdi in
+           List.iter (fun self ->
+               if Client.VBD.get_VM ~rpc ~session_id ~self = dom0 then begin
+                 Client.VBD.unplug ~rpc ~session_id ~self;
+                 Client.VBD.destroy ~rpc ~session_id ~self
+               end) vbds);
+       if try Sys.is_directory mount_point_parent_dir with _ -> false then begin
+         let output, _ = Forkhelpers.execute_command_get_output "/bin/rm" ["-r"; mount_point_parent_dir] in
+         debug "pool_update.detach_helper Mountpoint removed (output=%s)" output
+       end;
     )
 
 let detach ~__context ~self =
@@ -140,21 +140,21 @@ let with_api_errors f x =
   with
   | Smint.Command_failed(ret, status, stdout_log, stderr_log)
   | Smint.Command_killed(ret, status, stdout_log, stderr_log) ->
-      let msg = Printf.sprintf "Smint.Command_{failed,killed} ret = %d; status = %s; stdout = %s; stderr = %s"
+    let msg = Printf.sprintf "Smint.Command_{failed,killed} ret = %d; status = %s; stdout = %s; stderr = %s"
         ret status stdout_log stderr_log in
-      raise (Api_errors.Server_error (Api_errors.internal_error, [msg]))
+    raise (Api_errors.Server_error (Api_errors.internal_error, [msg]))
 
 (* yum confif example
-  [main]
-  keepcache=0
-  reposdir=/dev/null
-  gpgcheck=$signed
-  repo_gpgcheck=$signed
+   [main]
+   keepcache=0
+   reposdir=/dev/null
+   gpgcheck=$signed
+   repo_gpgcheck=$signed
 
-  [$label]
-  name=$label
-  baseurl=url
-  ${signed:+gpgkey=file:///etc/pki/rpm-gpg/key}
+   [$label]
+   name=$label
+   baseurl=url
+   ${signed:+gpgkey=file:///etc/pki/rpm-gpg/key}
 *)
 let create_yum_config ~__context ~self ~url =
   let key = Db.Pool_update.get_key ~__context ~self in
@@ -170,22 +170,22 @@ let attach_helper ~__context ~uuid ~vdi =
   let ip = Db.Host.get_address ~__context ~self:host in
   with_inc_refcount ~__context ~uuid ~vdi
     (fun ~__context ~uuid ~vdi ->
-      let mount_point_parent_dir = String.concat "/" [Xapi_globs.host_update_dir; uuid] in
-      let mount_point = Filename.concat mount_point_parent_dir "vdi" in
-      debug "pool_update.attach_helper %s to %s" uuid mount_point;
-      let output, _ = Forkhelpers.execute_command_get_output "/bin/mkdir" ["-p"; mount_point] in
-      debug "pool_update.attach_helper Mountpoint created (output=%s)" output;
-      let device = Helpers.call_api_functions ~__context
-        (fun rpc session_id ->
-          let dom0 = Helpers.get_domain_zero ~__context in
-          let vbd = Client.VBD.create ~rpc ~session_id ~vM:dom0 ~empty:false ~vDI:vdi
+       let mount_point_parent_dir = String.concat "/" [Xapi_globs.host_update_dir; uuid] in
+       let mount_point = Filename.concat mount_point_parent_dir "vdi" in
+       debug "pool_update.attach_helper %s to %s" uuid mount_point;
+       let output, _ = Forkhelpers.execute_command_get_output "/bin/mkdir" ["-p"; mount_point] in
+       debug "pool_update.attach_helper Mountpoint created (output=%s)" output;
+       let device = Helpers.call_api_functions ~__context
+           (fun rpc session_id ->
+              let dom0 = Helpers.get_domain_zero ~__context in
+              let vbd = Client.VBD.create ~rpc ~session_id ~vM:dom0 ~empty:false ~vDI:vdi
                   ~userdevice:"autodetect" ~bootable:false ~mode:`RO ~_type:`Disk ~unpluggable:true
                   ~qos_algorithm_type:"" ~qos_algorithm_params:[]
                   ~other_config:[] in
-          Client.VBD.plug ~rpc ~session_id ~self:vbd;
-          "/dev/" ^ (Client.VBD.get_device ~rpc ~session_id ~self:vbd)) in
-      with_api_errors (mount device) mount_point;
-      debug "pool_update.attach_helper Mounted %s" mount_point
+              Client.VBD.plug ~rpc ~session_id ~self:vbd;
+              "/dev/" ^ (Client.VBD.get_device ~rpc ~session_id ~self:vbd)) in
+       with_api_errors (mount device) mount_point;
+       debug "pool_update.attach_helper Mounted %s" mount_point
     );
   "http://" ^ ip ^ Constants.get_pool_update_download_uri ^ uuid ^ "/vdi"
 
@@ -216,7 +216,7 @@ let parse_update_info xml =
       with
       | _ -> 0L
     in
-    let guidance = 
+    let guidance =
       try
         match List.assoc "after-apply-guidance" attr with
         | "" -> []
@@ -253,12 +253,12 @@ let extract_update_info ~__context ~vdi ~verify =
   let vdi_uuid = Db.VDI.get_uuid ~__context ~self:vdi in
   finally
     (fun () ->
-      let url = attach_helper ~__context ~uuid:vdi_uuid ~vdi in
-      let update_path = Printf.sprintf "%s/%s/vdi" Xapi_globs.host_update_dir vdi_uuid in
-      debug "pool_update.extract_update_info get url='%s', will parse_file in '%s'" url update_path;
-      let xml = Xml.parse_file (String.concat "/" [update_path ; "update.xml"]) in
-      let update_info = parse_update_info xml in
-      ignore(verify update_info update_path); update_info
+       let url = attach_helper ~__context ~uuid:vdi_uuid ~vdi in
+       let update_path = Printf.sprintf "%s/%s/vdi" Xapi_globs.host_update_dir vdi_uuid in
+       debug "pool_update.extract_update_info get url='%s', will parse_file in '%s'" url update_path;
+       let xml = Xml.parse_file (String.concat "/" [update_path ; "update.xml"]) in
+       let update_info = parse_update_info xml in
+       ignore(verify update_info update_path); update_info
     )
     (fun () -> detach_helper ~__context ~uuid:vdi_uuid ~vdi)
 
@@ -274,7 +274,7 @@ let assert_space_available ?(multiplier=3L) update_size =
   then
     begin
       error "Not enough space on filesystem to upload update. Required %Ld, \
-      but only %Ld available" really_required free_bytes;
+             but only %Ld available" really_required free_bytes;
       raise (Api_errors.Server_error (Api_errors.out_of_space, [Xapi_globs.host_update_dir]))
     end
 
@@ -284,22 +284,22 @@ let verify update_info update_path =
   let update_xml_path = Filename.concat update_path "update.xml" in
   let repomd_xml_path = Filename.concat update_path "repodata/repomd.xml" in
   List.iter (fun filename ->
-    let signature = filename ^ ".asc" in
-    try
-      Gpg.with_verified_signature filename signature (fun fingerprint fd ->
-          match fingerprint with
-          | Some f ->
-            debug "Fingerprint '%s' verified." f
-          | _ ->
-            begin
-              debug "No fingerprint!";
-              raise (Api_errors.Server_error (Api_errors.invalid_update, ["Invalid signature"]))
-            end
-      )
-    with exn ->
-      debug "Caught exception while checking signature: %s" (ExnHelper.string_of_exn exn);
-      raise (Api_errors.Server_error (Api_errors.invalid_update, ["Invalid signature"]))
-  ) [update_xml_path; repomd_xml_path];
+      let signature = filename ^ ".asc" in
+      try
+        Gpg.with_verified_signature filename signature (fun fingerprint fd ->
+            match fingerprint with
+            | Some f ->
+              debug "Fingerprint '%s' verified." f
+            | _ ->
+              begin
+                debug "No fingerprint!";
+                raise (Api_errors.Server_error (Api_errors.invalid_update, ["Invalid signature"]))
+              end
+          )
+      with exn ->
+        debug "Caught exception while checking signature: %s" (ExnHelper.string_of_exn exn);
+        raise (Api_errors.Server_error (Api_errors.invalid_update, ["Invalid signature"]))
+    ) [update_xml_path; repomd_xml_path];
   debug "Verify signature OK for pool update uuid: %s by key: %s" update_info.uuid update_info.key
 
 let create_update_record ~__context ~update ~update_info ~vdi =
@@ -332,16 +332,16 @@ let pool_apply ~__context ~self =
   let pool_update_name = Db.Pool_update.get_name_label ~__context ~self in
   debug "pool_update.pool_apply %s" pool_update_name;
   let failed_hosts = Db.Pool_update.get_hosts ~__context ~self |>
-  List.set_difference (Db.Host.get_all ~__context) |>
-  List.fold_left (fun acc host ->
-    try
-      ignore(Helpers.call_api_functions ~__context
-        (fun rpc session_id -> Client.Pool_update.apply rpc session_id self host));
-      acc
-    with e ->
-      debug "Caught exception while pool_apply %s: %s" (Ref.string_of host) (ExnHelper.string_of_exn e);
-      host :: acc
-  ) [] in
+                     List.set_difference (Db.Host.get_all ~__context) |>
+                     List.fold_left (fun acc host ->
+                         try
+                           ignore(Helpers.call_api_functions ~__context
+                                    (fun rpc session_id -> Client.Pool_update.apply rpc session_id self host));
+                           acc
+                         with e ->
+                           debug "Caught exception while pool_apply %s: %s" (Ref.string_of host) (ExnHelper.string_of_exn e);
+                           host :: acc
+                       ) [] in
   if List.length failed_hosts > 0 then raise (Api_errors.Server_error(Api_errors.update_pool_apply_failed, (List.map Ref.string_of failed_hosts)))
 
 let pool_clean ~__context ~self =
@@ -361,9 +361,9 @@ let destroy ~__context ~self =
 let detach_attached_updates __context =
   Db.Pool_update.get_all ~__context |>
   List.iter ( fun self ->
-    ignore(Helpers.call_api_functions ~__context
-      (fun rpc session_id -> Client.Pool_update.detach ~rpc ~session_id ~self))
-  )
+      ignore(Helpers.call_api_functions ~__context
+               (fun rpc session_id -> Client.Pool_update.detach ~rpc ~session_id ~self))
+    )
 
 let resync_host ~__context ~host =
   let update_applied_dir = "/var/update/applied" in
@@ -372,17 +372,17 @@ let resync_host ~__context ~host =
     let updates_applied = try Array.to_list (Sys.readdir update_applied_dir) with _ -> [] in
     let update_uuids = List.filter (fun update -> Uuid.is_uuid update) updates_applied in
     let not_existing_uuids = List.filter (fun update_uuid ->
-      try ignore (Db.Pool_update.get_by_uuid ~__context ~uuid:update_uuid); false
-      with _ -> true) update_uuids in
+        try ignore (Db.Pool_update.get_by_uuid ~__context ~uuid:update_uuid); false
+        with _ -> true) update_uuids in
 
     (* Handle the updates rolluped and create records accordingly *)
     List.iter (fun update_uuid ->
-      let update_info = extract_applied_update_info update_uuid in
-      let update = Ref.make () in
-      create_update_record ~__context ~update:update ~update_info ~vdi:Ref.null
-    ) not_existing_uuids;
+        let update_info = extract_applied_update_info update_uuid in
+        let update = Ref.make () in
+        create_update_record ~__context ~update:update ~update_info ~vdi:Ref.null
+      ) not_existing_uuids;
     let update_refs = List.map (fun update_uuid ->
-      Db.Pool_update.get_by_uuid ~__context ~uuid:update_uuid) update_uuids in
+        Db.Pool_update.get_by_uuid ~__context ~uuid:update_uuid) update_uuids in
     Db.Host.set_updates ~__context ~self:host ~value:update_refs
   end
   else Db.Host.set_updates ~__context ~self:host ~value:[]
@@ -391,15 +391,15 @@ let pool_update_download_handler (req: Request.t) s _ =
   debug "pool_update.pool_update_download_handler URL %s" req.Request.uri;
   (* remove any dodgy use of "." or ".." NB we don't prevent the use of symlinks *)
   let filepath = String.sub_to_end req.Request.uri (String.length Constants.get_pool_update_download_uri)
-    |> Filename.concat Xapi_globs.host_update_dir
-    |> Stdext.Unixext.resolve_dot_and_dotdot in
+                 |> Filename.concat Xapi_globs.host_update_dir
+                 |> Stdext.Unixext.resolve_dot_and_dotdot in
   debug "pool_update.pool_update_download_handler %s" filepath;
 
-  if not(String.startswith Xapi_globs.host_update_dir filepath) || not (Sys.file_exists filepath) then begin 
+  if not(String.startswith Xapi_globs.host_update_dir filepath) || not (Sys.file_exists filepath) then begin
     debug "Rejecting request for file: %s (outside of or not existed in directory %s)" filepath Xapi_globs.host_update_dir;
     Http_svr.response_forbidden ~req s
   end else begin
     Http_svr.response_file s filepath;
-    req.Request.close <- true  
+    req.Request.close <- true
   end
 
