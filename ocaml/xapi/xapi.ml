@@ -712,7 +712,7 @@ let set_stunnel_timeout () =
  * master, and to do that we need to start an outgoing stunnel. *)
 let set_stunnel_legacy_inv ~__context () =
   Stunnel.set_good_ciphersuites (match !Xapi_globs.ciphersuites_good_outbound with
-    | "" -> raise (Api_errors.Server_error (Api_errors.internal_error,["Configuration file does not specify ciphersuites-good-outbound."]))
+    | "" -> raise (Api_errors.Server_error (Api_errors.internal_error,["Configuration file specifies a blank string for ciphersuites-good-outbound."]))
     | s -> s
   );
   Stunnel.set_legacy_ciphersuites !Xapi_globs.ciphersuites_legacy_outbound;
