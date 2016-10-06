@@ -37,6 +37,7 @@ let read_config filename =
 		"igd-passthru-vendor-whitelist", Config.Set_string vendor_whitelist;
 		"relax-xsm-sr-check", Config.Set_bool Xapi_globs.relax_xsm_sr_check;
 		"hotfix-fingerprint", Config.Set_string Xapi_globs.trusted_patch_key;
+		"gpumon_stop_timeout", Config.Set_float Xapi_globs.gpumon_stop_timeout;
 		(let cgo = "ciphersuites-good-outbound" in
 		cgo, Config.String (fun s ->
 			D.debug "Processing config %s=%s" cgo s;
