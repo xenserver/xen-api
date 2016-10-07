@@ -302,7 +302,25 @@ let verify update_info update_path =
     ) [update_xml_path; repomd_xml_path];
   debug "Verify signature OK for pool update uuid: %s by key: %s" update_info.uuid update_info.key
 
+let patch_uuid_of_update_uuid uuid =
+  let arr = Uuid.int_array_of_uuid (Uuid.uuid_of_string uuid) in
+  let modify x = arr.(x) <- 0 in
+  modify 4; modify 5; modify 6; modify 7;
+  Uuid.uuid_of_int_array arr |> Uuid.string_of_uuid
+
 let create_update_record ~__context ~update ~update_info ~vdi =
+  let patch_ref = Ref.make () in
+  ignore(Db.Pool_patch.create ~__context
+           ~ref:patch_ref ~uuid:(patch_uuid_of_update_uuid update_info.uuid)
+           ~name_label:update_info.name_label
+           ~name_description:update_info.name_description
+           ~version:"0"
+           ~filename:""
+           ~size:update_info.installation_size
+           ~pool_applied:false
+           ~after_apply_guidance:update_info.after_apply_guidance
+           ~pool_update:update
+           ~other_config:[]);
   Db.Pool_update.create ~__context
     ~ref:update
     ~uuid:update_info.uuid
@@ -355,7 +373,10 @@ let destroy ~__context ~self =
   let pool_update_name = Db.Pool_update.get_name_label ~__context ~self in
   debug "pool_update.destroy %s" pool_update_name;
   match Db.Pool_update.get_hosts ~__context ~self with
-  | [] -> Db.Pool_update.destroy ~__context ~self
+  | [] ->
+    let patch = Xapi_pool_patch.pool_patch_of_update __context self in
+    Db.Pool_update.destroy ~__context ~self;
+    Db.Pool_patch.destroy ~__context ~self:patch
   | _ -> raise (Api_errors.Server_error(Api_errors.update_is_applied, []))
 
 let detach_attached_updates __context =
@@ -383,7 +404,12 @@ let resync_host ~__context ~host =
       ) not_existing_uuids;
     let update_refs = List.map (fun update_uuid ->
         Db.Pool_update.get_by_uuid ~__context ~uuid:update_uuid) update_uuids in
-    Db.Host.set_updates ~__context ~self:host ~value:update_refs
+    Db.Host.set_updates ~__context ~self:host ~value:update_refs;
+
+    List.iter (fun update_ref ->
+        let pool_patch_ref = Xapi_pool_patch.pool_patch_of_update ~__context update_ref in
+        Xapi_pool_patch.write_patch_applied_db ~__context ~self:pool_patch_ref ~host ()
+      ) update_refs
   end
   else Db.Host.set_updates ~__context ~self:host ~value:[]
 
@@ -402,4 +428,3 @@ let pool_update_download_handler (req: Request.t) s _ =
     Http_svr.response_file s filepath;
     req.Request.close <- true
   end
-
