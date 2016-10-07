@@ -87,6 +87,7 @@ val create :
   license_server:(string * string) list ->
   local_cache_sr:[ `SR ] Ref.t ->
   chipset_info:(string * string) list ->
+  ssl_legacy:bool ->
   [ `host ] Ref.t
 val destroy : __context:Context.t -> self:API.ref_host -> unit
 val declare_dead : __context:Context.t -> host:API.ref_host -> unit
@@ -132,6 +133,11 @@ val get_diagnostic_timing_stats :
 val set_hostname_live :
   __context:Context.t -> host:[ `host ] Ref.t -> hostname:string -> unit
 val is_in_emergency_mode : __context:'a -> bool
+
+val set_stunnel_legacy :
+  __context:Context.t -> bool -> unit
+val set_ssl_legacy :
+  __context:Context.t -> self:[ `host ] Ref.t -> value:bool -> unit
 val compute_free_memory :
   __context:Context.t -> host:[ `host ] Ref.t -> int64
 val compute_memory_overhead :
