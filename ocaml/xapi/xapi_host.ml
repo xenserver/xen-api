@@ -963,9 +963,22 @@ let call_plugin ~__context ~host ~plugin ~fn ~args =
 
 (* this is the generic extension call available to xapi users *)
 let call_extension ~__context ~host ~call =
-	let rpc = Jsonrpc.call_of_string call in
-	let response = Xapi_extensions.call_extension rpc in
-	Jsonrpc.string_of_response response
+  let rpc = Jsonrpc.call_of_string call in
+  let response = Xapi_extensions.call_extension rpc in
+  if response.Rpc.success then
+    response.Rpc.contents
+  else
+    let failure = response.Rpc.contents in
+    let protocol_failure () = raise Api_errors.(Server_error (extension_protocol_failure,[Jsonrpc.to_string failure])) in
+    match failure with
+    | Rpc.Enum (xs) -> begin
+        (* This really ought to be a list of strings... *)
+        match List.map (function | Rpc.String x -> x | _ -> protocol_failure ()) xs with
+        | x::xs -> raise (Api_errors.Server_error (x, xs))
+        | _ -> protocol_failure ()
+      end
+    | Rpc.String x -> raise (Api_errors.Server_error (x, []))
+    | _ -> protocol_failure ()
 
 let has_extension ~__context ~host ~name =
 	try
