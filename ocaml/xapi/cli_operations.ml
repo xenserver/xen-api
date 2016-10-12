@@ -4703,24 +4703,18 @@ let update_introduce printer rpc session_id params =
   printer (Cli_printer.PList [uuid])
 
 let update_precheck printer rpc session_id params =
-  let uuid = List.assoc "uuid" params in
-  ignore(
-    do_host_op rpc session_id (fun _ host ->
-        let host_ref = host.getref () in
-        let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
-        Client.Pool_update.precheck rpc session_id ref host_ref
-      ) params ["uuid"]
-  )
+  let update_uuid = List.assoc "uuid" params in
+  let host_uuid = List.assoc "host-uuid" params in
+  let update_ref = Client.Pool_update.get_by_uuid rpc session_id update_uuid in
+  let host_ref = Client.Host.get_by_uuid rpc session_id host_uuid in
+  ignore (Client.Pool_update.precheck rpc session_id update_ref host_ref)
 
 let update_apply printer rpc session_id params =
-  let uuid = List.assoc "uuid" params in
-  ignore(
-    do_host_op rpc session_id (fun _ host ->
-        let host_ref = host.getref () in
-        let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
-        Client.Pool_update.apply rpc session_id ref host_ref
-      ) params ["uuid"]
-  )
+  let update_uuid = List.assoc "uuid" params in
+  let host_uuid = List.assoc "host-uuid" params in
+  let update_ref = Client.Pool_update.get_by_uuid rpc session_id update_uuid in
+  let host_ref = Client.Host.get_by_uuid rpc session_id host_uuid in
+  ignore (Client.Pool_update.apply rpc session_id update_ref host_ref)
 
 let update_pool_apply printer rpc session_id params =
   let uuid = List.assoc "uuid" params in
