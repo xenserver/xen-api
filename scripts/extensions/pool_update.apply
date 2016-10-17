@@ -12,12 +12,15 @@ import errno
 import shutil
 import logging
 import xcp.logger
+import ConfigParser
+import StringIO
 
 TMP_DIR = '/tmp/'
 PATCH_ALREADY_APPLIED = 'PATCH_ALREADY_APPLIED'
 PATCH_APPLY_FAILED = 'PATCH_APPLY_FAILED'
 OTHER_OPERATION_IN_PROGRESS = 'OTHER_OPERATION_IN_PROGRESS'
 PATCH_PRECHECK_FAILED_UNKNOWN_ERROR = 'PATCH_PRECHECK_FAILED_UNKNOWN_ERROR'
+XAPI_CONF = '/etc/xapi.conf'
 
 
 class ApplyFailure(Exception):
@@ -110,6 +113,18 @@ if __name__ == '__main__':
                 file.write("{0}".format(yum_conf))
 
             execute_apply(session, update_package, yum_conf_file)
+
+            after_apply_guidance = session.xenapi.pool_update.get_after_apply_guidance(update)
+            if 'restartHost' in after_apply_guidance:
+                with open(XAPI_CONF, 'r') as file_conf: 
+                    str_conf = file_conf.read()
+                ini_str = '[default]\n' + str_conf
+                ini_fp = StringIO.StringIO(ini_str)
+                config = ConfigParser.RawConfigParser()
+                config.readfp(ini_fp)
+                reboot_required_hfxs = config.get('default', 'reboot_required_hfxs')
+                with open(reboot_required_hfxs, "a") as file:
+                    file.write("{0}\n".format(update_uuid))
 
             session.xenapi.pool_update.resync_host(host)
             print(success_message())
