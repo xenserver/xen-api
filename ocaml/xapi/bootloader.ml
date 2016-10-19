@@ -113,6 +113,20 @@ let parse_exception x =
   | code :: params -> raise (Api_errors.Server_error(code, params))
   | _ -> failwith (Printf.sprintf "Failed to parse stderr output of bootloader: %s" x)
 
+(* A layer of defence against the chance of a malicious guest grub config tricking
+ * pygrub or eliloader into giving the guest access to an inappropriate file in dom0 *)
+let sanity_check_path p = match p with
+	| "" -> p
+	| p when Filename.is_relative p ->
+		raise (Bad_error ("Bootloader returned a relative path for kernel or ramdisk: "^p))
+	| p ->
+		let canonical_path = Stdext.Unixext.resolve_dot_and_dotdot p in
+		match Filename.dirname canonical_path with
+			| "/var/run/xen/pygrub" (* From pygrub, including when called by eliloader *)
+			| "/var/run/xend/boot" (* From eliloader *)
+				-> canonical_path
+			| _ -> raise (Bad_error ("Malicious guest? Bootloader returned a kernel or ramdisk path outside the allowed directories: "^p))
+
 (** Extract the default kernel using the -q option *)
 let extract_default_kernel bootloader disks legacy_args extra_args pv_bootloader_args vm_uuid =
   let bootloader_path = List.assoc bootloader Xapi_globs.supported_bootloaders in
@@ -126,7 +140,14 @@ let extract_default_kernel bootloader disks legacy_args extra_args pv_bootloader
   try
 	let output = Helpers.call_script ~log_successful_output:false bootloader_path cmdline in
 		debug "Bootloader output: %s" output;
-		parse_output_simple output
+		let result = parse_output_simple output in
+		{
+			kernel_path = sanity_check_path result.kernel_path;
+			initrd_path = (match result.initrd_path with
+				| None -> None
+				| Some p -> Some (sanity_check_path p));
+			kernel_args = result.kernel_args
+		}
   with Forkhelpers.Spawn_internal_error(stderr, stdout, _) ->
 	  parse_exception stderr
 
