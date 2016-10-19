@@ -81,6 +81,12 @@ let keys_of_features =
 		Xen_motion, ("restrict_xen_motion", Negative, "XenMotion");
 	]
 
+(* A list of features that must be considered "enabled" by `of_assoc_list`
+   if the feature string is missing from the list. These are existing features
+   that have been recently restricted, and which we want to remain enabled during
+   a rolling pool upgrade. *)
+let enabled_when_unknown = [Xen_motion]
+
 let string_of_feature f =
 	let str, o, _ = List.assoc f keys_of_features in
 	str, o
@@ -117,15 +123,13 @@ let to_assoc_list (s: feature list) =
 	List.map get_map all_features
 
 let of_assoc_list l =
-	let get_feature (k, v) =
+	let get_feature f =
 		try
-			let v = bool_of_string v in
-			let f, o = feature_of_string k in
+			let str, o = string_of_feature f in
+			let v = bool_of_string (List.assoc str l) in
 			let v = if o = Positive then v else not v in
 			if v then Some f else None
 		with _ ->
-			None
+			if List.mem f enabled_when_unknown then Some f else None
 	in
-	let features = List.map get_feature l in
-	List.fold_left (function ac -> function Some f -> f :: ac | None -> ac) [] features
-
+	Listext.List.filter_map get_feature all_features
