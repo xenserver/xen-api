@@ -26,16 +26,19 @@ open Forkhelpers
 module D=Debug.Debugger(struct let name="bootloader" end)
 open D
 
+let pygrub="pygrub"
+let eliloader="eliloader"
 
 exception Error of string
 
 (** Helper function to generate a bootloader commandline *)
-let bootloader_args q extra_args legacy_args pv_bootloader_args image vm_uuid = 
+let bootloader_args bootloader q extra_args legacy_args pv_bootloader_args image vm_uuid = 
   (* Let's not do anything fancy while parsing the pv_bootloader_args string:
      no escaping of spaces or quotes for now *)
   let pv_bootloader_args = if pv_bootloader_args = "" then [] else String.split ' ' pv_bootloader_args in
 
   let rules = [ '"', "\\\""; '\\', "\\\\" ] in
+  (if bootloader=eliloader then [] else ["--output-format=simple"]) @
   [ if q then "-q" else "";
     Printf.sprintf "--default_args=%s" (String.escaped ~rules legacy_args);
     Printf.sprintf "--extra_args=%s" (String.escaped ~rules extra_args);
@@ -118,7 +121,7 @@ let extract_default_kernel bootloader disks legacy_args extra_args pv_bootloader
   if List.length disks > 1 then
     raise (Error(Printf.sprintf "too many bootable disks (%d disks)" (List.length disks)));
   let disk = List.hd disks in
-  let cmdline = bootloader_args true extra_args legacy_args pv_bootloader_args disk vm_uuid in
+  let cmdline = bootloader_args bootloader true extra_args legacy_args pv_bootloader_args disk vm_uuid in
   debug "Bootloader commandline: %s %s\n" bootloader_path (String.concat " " cmdline);
   try
 	let output = Helpers.call_script ~log_successful_output:false bootloader_path cmdline in
