@@ -29,9 +29,11 @@ open D
 
 let pygrub_path = "/usr/bin/pygrub"
 let eliloader_path = "/usr/bin/eliloader"
+let pygrub="pygrub"
+let eliloader="eliloader"
 let supported_bootloader_paths = [
-	"pygrub", pygrub_path;
-	"eliloader", eliloader_path
+	pygrub, pygrub_path;
+	eliloader, eliloader_path
 ]
 let supported_bootloaders = List.map fst supported_bootloader_paths
 
@@ -50,12 +52,13 @@ type t = {
 }
 
 (** Helper function to generate a bootloader commandline *)
-let bootloader_args q extra_args legacy_args pv_bootloader_args image vm_uuid = 
+let bootloader_args bootloader q extra_args legacy_args pv_bootloader_args image vm_uuid = 
   (* Let's not do anything fancy while parsing the pv_bootloader_args string:
      no escaping of spaces or quotes for now *)
   let pv_bootloader_args = if pv_bootloader_args = "" then [] else String.split ' ' pv_bootloader_args in
 
   let rules = [ '"', "\\\""; '\\', "\\\\" ] in
+  (if bootloader=eliloader then [] else ["--output-format=simple"]) @
   [ if q then "-q" else "";
     Printf.sprintf "--default_args=%s" (String.escaped ~rules legacy_args);
     Printf.sprintf "--extra_args=%s" (String.escaped ~rules extra_args);
@@ -137,7 +140,7 @@ let extract (task: Xenops_task.t) ~bootloader ~disk ?(legacy_args="") ?(extra_ar
 	if not(List.mem_assoc bootloader supported_bootloader_paths)
 	then raise (Unknown_bootloader bootloader);
 	let bootloader_path = List.assoc bootloader supported_bootloader_paths in
-	let cmdline = bootloader_args true extra_args legacy_args pv_bootloader_args disk vm_uuid in
+	let cmdline = bootloader_args bootloader true extra_args legacy_args pv_bootloader_args disk vm_uuid in
 	debug "Bootloader commandline: %s %s\n" bootloader_path (String.concat " " cmdline);
 	try
 		let output, _ = Cancel_utils.cancellable_subprocess task bootloader_path cmdline in
