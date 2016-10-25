@@ -7107,13 +7107,16 @@ let pool_remove_from_guest_agent_config = call
     ~allowed_roles:_R_POOL_ADMIN
     ()
 
-let pool_set_default_sr = call
+let pool_set_default_SR = call
     ~name:"set_default_SR"
-    ~in_product_since:rel_ely
+    ~lifecycle:
+      [ Published, rel_rio, "set default SR for VDIs"
+      ; Changed,   rel_ely, "enable the redo-log"
+      ]
     ~doc:"Set the default SR for VDIs."
     ~params:
       [ Ref _pool, "self", "The pool"
-      ; Ref _sr, "sr", "SR to hold VDIs."
+      ; Ref _sr, "value",  "SR to hold VDIs."
       ]
     ~allowed_roles:_R_POOL_ADMIN
     ()
@@ -7189,7 +7192,7 @@ let pool =
       ; pool_has_extension
       ; pool_add_to_guest_agent_config
       ; pool_remove_from_guest_agent_config
-      ; pool_set_default_sr
+      ; pool_set_default_SR
       ]
     ~contents:
       ([uid ~in_oss_since:None _pool] @
