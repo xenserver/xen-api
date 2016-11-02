@@ -73,24 +73,24 @@ let parse_output_simple x =
 	match first_word with
       | "kernel" -> (
         match acc.kernel with
-          | Some _ -> raise (Bad_error ("More than one kernel line when parsing bootloader result: "^x))
+          | Some _ -> raise (Error ("More than one kernel line when parsing bootloader result: "^x))
           | None ->
             debug "Using kernel line from bootloader output: %s" l;
             {acc with kernel = Some (String.sub l pos (String.length l - pos))} )
       | "ramdisk" -> (
         match acc.ramdisk with
-          | Some _ -> raise (Bad_error ("More than one ramdisk line when parsing bootloader result: "^x))
+          | Some _ -> raise (Error ("More than one ramdisk line when parsing bootloader result: "^x))
           | None ->
             debug "Using ramdisk line from bootloader output: %s" l;
             {acc with ramdisk = Some (String.sub l pos (String.length l - pos))} )
       | "args" -> (
         match acc.args with
-          | Some _ -> raise (Bad_error ("More than one args line when parsing bootloader result: "^x))
+          | Some _ -> raise (Error ("More than one args line when parsing bootloader result: "^x))
           | None ->
             debug "Using args line from bootloader output: %s" l;
             {acc with args = Some (String.sub l pos (String.length l - pos))} )
       | "" -> acc
-      | _ -> raise (Bad_error ("Unrecognised start of line when parsing bootloader result: line="^l))
+      | _ -> raise (Error ("Unrecognised start of line when parsing bootloader result: line="^l))
   in
   let parse_line acc l =
     try parse_line_optimistic acc l
@@ -100,7 +100,7 @@ let parse_output_simple x =
   let content = List.fold_left parse_line {kernel=None; ramdisk=None; args=None} linelist in
   {
     kernel_path = (match content.kernel with
-      | None -> raise (Bad_error ("No kernel found in "^x))
+      | None -> raise (Error ("No kernel found in "^x))
       | Some p -> p);
     initrd_path = content.ramdisk;
     kernel_args = (match content.args with
@@ -118,14 +118,14 @@ let parse_exception x =
 let sanity_check_path p = match p with
 	| "" -> p
 	| p when Filename.is_relative p ->
-		raise (Bad_error ("Bootloader returned a relative path for kernel or ramdisk: "^p))
+		raise (Error ("Bootloader returned a relative path for kernel or ramdisk: "^p))
 	| p ->
 		let canonical_path = Unixext.resolve_dot_and_dotdot p in
 		match Filename.dirname canonical_path with
 			| "/var/run/xen/pygrub" (* From pygrub, including when called by eliloader *)
 			| "/var/run/xend/boot" (* From eliloader *)
 				-> canonical_path
-			| _ -> raise (Bad_error ("Malicious guest? Bootloader returned a kernel or ramdisk path outside the allowed directories: "^p))
+			| _ -> raise (Error ("Malicious guest? Bootloader returned a kernel or ramdisk path outside the allowed directories: "^p))
 
 (** Extract the default kernel using the -q option *)
 let extract_default_kernel bootloader disks legacy_args extra_args pv_bootloader_args vm_uuid =
