@@ -404,7 +404,7 @@ let update_vbds doms =
 		with _ -> !vals
 	in
 	let shm_devices_dir = "/dev/shm" in
-	let sysfs_devices_dir = "/sys/devices/" in
+	let sysfs_devices_dir = "/sys/devices" in
 	(* Method to read stats from sysfs *)
 	let read_all_sysfs_stats vbd =
 		let sysfs_stat_tree_exists vbd =
