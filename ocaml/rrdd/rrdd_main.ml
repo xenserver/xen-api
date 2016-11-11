@@ -404,7 +404,7 @@ let update_vbds doms =
 		with _ -> !vals
 	in
 	let shm_devices_dir = "/dev/shm" in
-	let sysfs_devices_dir = "/sys/devices/" in
+	let sysfs_devices_dir = "/sys/devices" in
 	(* Method to read stats from sysfs *)
 	let read_all_sysfs_stats vbd =
 		let sysfs_stat_tree_exists vbd =
@@ -481,7 +481,12 @@ let update_vbds doms =
 					 * when CAR-133 is in place. CAR-133 attempts to plug raw VDI's
 					 * directly from LVs to blkback. *)
 					let inflight = Int64.add (Int64.sub b.st_rd_req b.st_rd_cnt) (Int64.sub b.st_wr_req b.st_wr_cnt) in
-					let iowait = Int64.to_float (Int64.div (Int64.add b.st_rd_cnt b.st_wr_cnt) (Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs))  /. 1000. in
+					let iowait =
+						let cum_wr_rd_usecs = Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs in
+						let cum_wr_rd_cnt = Int64.add b.st_rd_cnt b.st_wr_cnt in
+						if cum_wr_rd_usecs > 0L then
+							Int64.to_float (Int64.div cum_wr_rd_cnt cum_wr_rd_usecs) /. 1000. 
+						else if cum_wr_rd_usecs = 0L then 0.0 else nan in
 					(* Average Queue Size is computed as the sum of the
 					 * read and write queues' averaged over 5 seconds *)
 					let avgqu_sz = Int64.div (Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs) avgqu_normalizer in
@@ -549,7 +554,12 @@ let update_vbds doms =
 						else 0L in
 					(* Create variables to hold new statistics *)
 					let inflight = Int64.add (Int64.sub b.st_rd_req b.st_rd_cnt) (Int64.sub b.st_wr_req b.st_wr_cnt) in
-					let iowait = Int64.to_float (Int64.div (Int64.add b.st_rd_cnt b.st_wr_cnt) (Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs))  /. 1000. in
+					let iowait =
+						let cum_wr_rd_usecs = Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs in
+						let cum_wr_rd_cnt = Int64.add b.st_rd_cnt b.st_wr_cnt in
+						if cum_wr_rd_usecs > 0L then
+							Int64.to_float (Int64.div cum_wr_rd_cnt cum_wr_rd_usecs) /. 1000. 
+						else if cum_wr_rd_usecs = 0L then 0.0 else nan in
 					(* Average Queue Size is computed as the sum of the
 					 * read and write queues' averaged over 5 seconds *)
 					let avgqu_sz = Int64.div (Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs) avgqu_normalizer in
