@@ -58,6 +58,11 @@ let xenstore_read_dir t path =
 	in
 	inner [] [path] |> List.fast_sort compare
 
+(* utility function based on the one in xenopsd.git/lib/xenstore.ml in newer XenServer versions. *)
+let mkdirperms t path perms =
+	t.Xst.mkdir path;
+	t.Xst.setperms path perms
+
 let dropnone x = List.filter_map (fun x -> x) x
 
 module type ITEM = sig
