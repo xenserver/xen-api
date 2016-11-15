@@ -47,6 +47,8 @@ val backend_pause_request_path_of_device : xs:Xs.xsh -> device -> string
 val backend_pause_token_path_of_device : xs:Xs.xsh -> device -> string
 val backend_pause_done_path_of_device : xs:Xs.xsh -> device -> string
 
+val mkdirperms : Xst.ops -> string -> Xsraw.perms -> unit
+
 val string_of_endpoint : endpoint -> string
 val string_of_device : device -> string
 val string_of_kind : kind -> string

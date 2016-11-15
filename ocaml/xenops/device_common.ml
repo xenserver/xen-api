@@ -51,6 +51,11 @@ let kind_of_string = function
 let string_of_endpoint (x: endpoint) =
   sprintf "(domid=%d | kind=%s | devid=%d)" x.domid (string_of_kind x.kind) x.devid  
 
+(* utility function based on the one in xenopsd.git/lib/xenstore.ml in newer XenServer versions. *)
+let mkdirperms xs path perms =
+  xs.Xst.mkdir path;
+  xs.Xst.setperms path perms
+
 let backend_path ~xs (backend: endpoint) (domu: Xc.domid) = 
   sprintf "%s/backend/%s/%u/%d" 
     (xs.Xs.getdomainpath backend.domid) 

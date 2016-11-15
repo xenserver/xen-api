@@ -77,12 +77,12 @@ let add_device ~xs device backend_list frontend_list private_list =
 		   record our own use of /dev/loop devices. Clearing this causes us to leak
 		   one per PV .iso *)
 
-		t.Xst.mkdirperms frontend_rw_path (device.frontend.domid, Xsraw.PERM_NONE, [ (device.backend.domid, Xsraw.PERM_READ) ]);
-		t.Xst.mkdirperms frontend_ro_path (0, Xsraw.PERM_NONE, []);
+		mkdirperms t frontend_rw_path (device.frontend.domid, Xsraw.PERM_NONE, [ (device.backend.domid, Xsraw.PERM_READ) ]);
+		mkdirperms t frontend_ro_path (0, Xsraw.PERM_NONE, []);
 
-		t.Xst.mkdirperms backend_path (device.backend.domid, Xsraw.PERM_NONE, [ (device.frontend.domid, Xsraw.PERM_READ) ]);
+		mkdirperms t backend_path (device.backend.domid, Xsraw.PERM_NONE, [ (device.frontend.domid, Xsraw.PERM_READ) ]);
 
-		t.Xst.mkdirperms hotplug_path (device.backend.domid, Xsraw.PERM_NONE, []);
+		mkdirperms t hotplug_path (device.backend.domid, Xsraw.PERM_NONE, []);
 
 		t.Xst.writev frontend_rw_path
 		             (("backend", backend_path) :: frontend_list);
@@ -91,7 +91,7 @@ let add_device ~xs device backend_list frontend_list private_list =
 		t.Xst.writev backend_path
 		             (("frontend", frontend_rw_path) :: backend_list);
 
-		t.Xst.mkdirperms private_data_path (device.backend.domid, Xsraw.PERM_NONE, []);
+		mkdirperms t private_data_path (device.backend.domid, Xsraw.PERM_NONE, []);
 		t.Xst.writev private_data_path private_list;
 	)
 
