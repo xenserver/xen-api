@@ -40,6 +40,11 @@ let rec xenstore_iter t fn path =
        | names -> List.iter (fun n -> if n <> "" then xenstore_iter t fn (path ^ "/" ^ n)) names
 
 
+(* utility function based on the one in xenopsd.git/lib/xenstore.ml in newer XenServer versions. *)
+let mkdirperms t path perms =
+	t.Xst.mkdir path;
+	t.Xst.setperms path perms
+
 let dropnone x = List.filter_map (fun x -> x) x
 
 module type ITEM = sig

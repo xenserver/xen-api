@@ -187,15 +187,15 @@ let make ~xc ~xs vm_info uuid =
 			t.Xst.rm dom_path;
 			t.Xst.rm xenops_dom_path;
 
-			t.Xst.mkdirperms dom_path roperm;
-			t.Xst.mkdirperms xenops_dom_path zeroperm;
+			mkdirperms t dom_path roperm;
+			mkdirperms t xenops_dom_path zeroperm;
 
 			(* The /vm path needs to be shared over a localhost migrate *)
 			let vm_exists = try ignore(t.Xst.read vm_path); true with _ -> false in
 			if vm_exists then 
 				xenstore_iter t (fun d -> t.Xst.setperms d roperm) vm_path
 			else begin
-				t.Xst.mkdirperms vm_path roperm;
+				mkdirperms t vm_path roperm;
 				t.Xst.writev vm_path [
 					"uuid", (Uuid.to_string uuid);
 					"name", name;
@@ -205,7 +205,7 @@ let make ~xc ~xs vm_info uuid =
 			t.Xst.write (Printf.sprintf "%s/domains/%d/create-time" vm_path domid) (Int64.to_string create_time);
 
 			t.Xst.rm vss_path;
-			t.Xst.mkdirperms vss_path rwperm;
+			mkdirperms t vss_path rwperm;
 
 			t.Xst.write (dom_path ^ "/vm") vm_path;
 			t.Xst.write (dom_path ^ "/vss") vss_path;
@@ -214,14 +214,14 @@ let make ~xc ~xs vm_info uuid =
 			(* create cpu and memory directory with read only perms *)
 			List.iter (fun dir ->
 				let ent = sprintf "%s/%s" dom_path dir in
-				t.Xst.mkdirperms ent roperm
+				mkdirperms t ent roperm
 			) [ "cpu"; "memory" ];
 
 
 			let mksubdirs base dirs perms =
 				List.iter (fun dir ->
 					let ent = base ^ "/" ^ dir in
-					t.Xst.mkdirperms ent perms
+					mkdirperms t ent perms
 				) (
 					dirs
 				) in
