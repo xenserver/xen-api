@@ -39,6 +39,8 @@ open D
 (* keys read by vif udev script (keep in sync with api:scripts/vif) *)
 let vif_udev_keys = "promiscuous" :: (List.map (fun x -> "ethtool-" ^ x) [ "rx"; "tx"; "sg"; "tso"; "ufo"; "gso" ])
 
+let mkdirperms = Xenops_utils.mkdirperms
+
 (****************************************************************************************)
 
 module Generic = struct
@@ -83,12 +85,12 @@ let add_device ~xs device backend_list frontend_list private_list =
 		   record our own use of /dev/loop devices. Clearing this causes us to leak
 		   one per PV .iso *)
 
-		t.Xst.mkdirperms frontend_rw_path (device.frontend.domid, Xsraw.PERM_NONE, [ (device.backend.domid, Xsraw.PERM_READ) ]);
-		t.Xst.mkdirperms frontend_ro_path (0, Xsraw.PERM_NONE, []);
+		mkdirperms t frontend_rw_path (device.frontend.domid, Xsraw.PERM_NONE, [ (device.backend.domid, Xsraw.PERM_READ) ]);
+		mkdirperms t frontend_ro_path (0, Xsraw.PERM_NONE, []);
 
-		t.Xst.mkdirperms backend_path (device.backend.domid, Xsraw.PERM_NONE, [ (device.frontend.domid, Xsraw.PERM_READ) ]);
+		mkdirperms t backend_path (device.backend.domid, Xsraw.PERM_NONE, [ (device.frontend.domid, Xsraw.PERM_READ) ]);
 
-		t.Xst.mkdirperms hotplug_path (device.backend.domid, Xsraw.PERM_NONE, []);
+		mkdirperms t hotplug_path (device.backend.domid, Xsraw.PERM_NONE, []);
 
 		t.Xst.writev frontend_rw_path
 		             (("backend", backend_path) :: frontend_list);
@@ -97,7 +99,7 @@ let add_device ~xs device backend_list frontend_list private_list =
 		t.Xst.writev backend_path
 		             (("frontend", frontend_rw_path) :: backend_list);
 
-		t.Xst.mkdirperms private_data_path (device.backend.domid, Xsraw.PERM_NONE, []);
+		mkdirperms t private_data_path (device.backend.domid, Xsraw.PERM_NONE, []);
 		t.Xst.writev private_data_path
 			(("backend-kind", string_of_kind device.backend.kind) ::
 				("backend-id", string_of_int device.backend.domid) :: private_list);
@@ -1444,7 +1446,7 @@ let ensure_device_frontend_exists ~xs backend_domid frontend_domid =
 		if try ignore(t.Xst.read (frontend_path ^ "backend")); true with _ -> false
 		then debug "PCI frontend already exists: no work to do"
 		else begin
-			t.Xst.mkdirperms frontend_path (frontend_domid, Xsraw.PERM_NONE, [ (backend_domid, Xsraw.PERM_READ) ]);
+			mkdirperms t frontend_path (frontend_domid, Xsraw.PERM_NONE, [ (backend_domid, Xsraw.PERM_READ) ]);
 			t.Xst.writev frontend_path [
 				"backend", backend_path;
 				"backend-id", string_of_int backend_domid;
@@ -1524,13 +1526,13 @@ let add ~xc ~xs ?(backend_domid=0) domid =
     Xs.transaction xs (fun t ->
         (* Add the frontend *)
         let perms = (domid, Xsraw.PERM_NONE, [(0, Xsraw.PERM_READ)]) in
-        t.Xst.mkdirperms frontend_path perms;
+        mkdirperms t frontend_path perms;
         t.Xst.writev frontend_path front;
 
         (* Now make the request *)
         let perms = (domid, Xsraw.PERM_NONE, []) in
         let request_path = Printf.sprintf "%s/%d" request_path 0 in
-        t.Xst.mkdirperms request_path perms;
+        mkdirperms t request_path perms;
         t.Xst.write (request_path ^ "/frontend") frontend_path;
     );
 	()
