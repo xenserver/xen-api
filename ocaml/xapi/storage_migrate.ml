@@ -300,7 +300,9 @@ let copy' ~task ~dbg ~sr ~vdi ~url ~dest ~dest_vdi =
 				);
 			)
 			(fun () -> 
-				Remote.DP.destroy ~dbg ~dp:remote_dp ~allow_leak:false);
+				Remote.DP.destroy ~dbg ~dp:remote_dp ~allow_leak:false;
+				State.remove id State.active_copy
+			);
 
 		SMPERF.debug "mirror.copy: copy complete local_vdi:%s dest_vdi:%s" vdi dest_vdi;
 
