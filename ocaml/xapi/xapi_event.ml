@@ -436,6 +436,8 @@ let inject ~__context ~_class ~ref =
 		(fun () ->
 			let db_ref = Db_backend.make () in
 			let g = Manifest.generation (Database.manifest (Db_ref.get_database db_ref)) in
+			let ok = match Db_cache_impl.get_table_from_ref db_ref ref with Some tbl -> tbl = _class | None -> false in
+			if not ok then raise (Api_errors.Server_error (Api_errors.handle_invalid, [_class; ref]));
 			Db_cache_impl.refresh_row db_ref _class ref; (* consumes this generation *)
 			g
 		) in
