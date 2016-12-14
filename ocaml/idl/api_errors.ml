@@ -305,7 +305,7 @@ let pool_joining_host_service_failed = "JOINING_HOST_SERVICE_FAILED"
 let pool_joining_host_must_have_physical_management_nic = "POOL_JOINING_HOST_MUST_HAVE_PHYSICAL_MANAGEMENT_NIC"
 let pool_joining_external_auth_mismatch = "POOL_JOINING_EXTERNAL_AUTH_MISMATCH"
 let pool_joining_host_must_have_same_product_version = "POOL_JOINING_HOST_MUST_HAVE_SAME_PRODUCT_VERSION"
-let pool_joining_host_must_only_have_physical_pifs = "POOL_JOINING_HOST_MUST_ONLY_HAVE_PHYSICAL_PIFS"
+let pool_joining_host_must_only_have_physical_pifs_or_vlan_pif = "POOL_JOINING_HOST_MUST_ONLY_HAVE_PHYSICAL_PIFS_OR_VLAN_PIF"
 
 (*workload balancing*)
 let wlb_not_initialized = "WLB_NOT_INITIALIZED"
