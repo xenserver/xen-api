@@ -211,7 +211,7 @@ let device_state_to_sl ds =
 	[ int ds.device.backend.domid; ds.backend_proto; ds.backend_device; ds.backend_state; "->"; ds.frontend_state; ds.frontend_type; ds.frontend_device; int ds.device.frontend.domid; ]
 
 let stat ~xs d =
-	let frontend_state = try xs.Xs.read (sprintf "%s/state" (frontend_path_of_device ~xs d)) with Xenbus.Xb.Noent -> "??" in
+	let frontend_state = try xs.Xs.read (sprintf "%s/state" (frontend_rw_path_of_device ~xs d)) with Xenbus.Xb.Noent -> "??" in
 	let backend_state = try xs.Xs.read (sprintf "%s/state" (backend_path_of_device ~xs d)) with Xenbus.Xb.Noent -> "??" in
 	(* The params string can be very long, truncate to a more reasonable width *)
 	let truncate params =
@@ -229,7 +229,7 @@ let stat ~xs d =
 		| x -> string_of_kind x in
 	let frontend_type = match d.frontend.kind with
 		| Vbd | Tap ->
-			let be = frontend_path_of_device ~xs d in
+			let be = frontend_ro_path_of_device ~xs d in
 			(try if xs.Xs.read (sprintf "%s/device-type" be) = "cdrom" then "cdrom" else "disk" with _ -> "??")
 		| x -> string_of_kind x in
 	let backend_device = match d.backend.kind with
