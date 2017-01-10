@@ -54,42 +54,44 @@ let tc_port_path domid = sprintf "/local/domain/%d/console/tc-port" domid
    specified by backend and frontend *)
 let add_device ~xs device backend_list frontend_list private_list =
 
-	let frontend_path = frontend_path_of_device ~xs device
+	let frontend_ro_path = frontend_ro_path_of_device ~xs device
+	and frontend_rw_path = frontend_rw_path_of_device ~xs device
 	and backend_path = backend_path_of_device ~xs device
 	and hotplug_path = Hotplug.get_hotplug_path device
 	and private_data_path = Hotplug.get_private_data_path_of_device device in
 
-	debug "adding device  B%d[%s]  F%d[%s]  H[%s]" device.backend.domid backend_path device.frontend.domid frontend_path hotplug_path;
+	debug "adding device  B%d[%s]  F%d[%s]  H[%s]" device.backend.domid backend_path device.frontend.domid frontend_rw_path hotplug_path;
 	Xs.transaction xs (fun t ->
 		begin try
-			ignore (t.Xst.read frontend_path);
-			if Xenbus.of_string (t.Xst.read (frontend_path ^ "/state"))
+			(* Use the ro one because a bad guest could delete the rw node. *)
+			ignore (t.Xst.read frontend_ro_path);
+			if Xenbus.of_string (t.Xst.read (frontend_ro_path ^ "/state"))
 			   <> Xenbus.Closed then
 				raise (Device_frontend_already_connected device)
 		with Xb.Noent -> () end;
 
-		t.Xst.rm frontend_path;
+		t.Xst.rm frontend_rw_path;
+		t.Xst.rm frontend_ro_path;
 		t.Xst.rm backend_path;
 		(* CA-16259: don't clear the 'hotplug_path' because this is where we
 		   record our own use of /dev/loop devices. Clearing this causes us to leak
 		   one per PV .iso *)
 
-		t.Xst.mkdir frontend_path;
-		t.Xst.setperms frontend_path (device.frontend.domid, Xsraw.PERM_NONE, [ (device.backend.domid, Xsraw.PERM_READ) ]);
+		mkdirperms t frontend_rw_path (device.frontend.domid, Xsraw.PERM_NONE, [ (device.backend.domid, Xsraw.PERM_READ) ]);
+		mkdirperms t frontend_ro_path (0, Xsraw.PERM_NONE, []);
 
-		t.Xst.mkdir backend_path;
-		t.Xst.setperms backend_path (device.backend.domid, Xsraw.PERM_NONE, [ (device.frontend.domid, Xsraw.PERM_READ) ]);
+		mkdirperms t backend_path (device.backend.domid, Xsraw.PERM_NONE, [ (device.frontend.domid, Xsraw.PERM_READ) ]);
 
-		t.Xst.mkdir hotplug_path;
-		t.Xst.setperms hotplug_path (device.backend.domid, Xsraw.PERM_NONE, []);
+		mkdirperms t hotplug_path (device.backend.domid, Xsraw.PERM_NONE, []);
 
-		t.Xst.writev frontend_path
+		t.Xst.writev frontend_rw_path
 		             (("backend", backend_path) :: frontend_list);
+		t.Xst.writev frontend_ro_path
+		             (("backend", backend_path) :: []);
 		t.Xst.writev backend_path
-		             (("frontend", frontend_path) :: backend_list);
+		             (("frontend", frontend_rw_path) :: backend_list);
 
-		t.Xst.mkdir private_data_path;
-		t.Xst.setperms private_data_path (device.backend.domid, Xsraw.PERM_NONE, []);
+		mkdirperms t private_data_path (device.backend.domid, Xsraw.PERM_NONE, []);
 		t.Xst.writev private_data_path private_list;
 	)
 
@@ -105,7 +107,8 @@ let safe_rm ~xs path =
    done as possible. *)
 let rm_device_state ~xs (x: device) =
 	debug "Device.rm_device_state %s" (string_of_device x);
-	safe_rm ~xs (frontend_path_of_device ~xs x);
+	safe_rm ~xs (frontend_ro_path_of_device ~xs x);
+	safe_rm ~xs (frontend_rw_path_of_device ~xs x);
 	safe_rm ~xs (backend_path_of_device ~xs x);
 	(* Cleanup the directory containing the error node *)
 	safe_rm ~xs (backend_error_path_of_device ~xs x);
@@ -768,8 +771,8 @@ let hard_shutdown ~xs (x: device) =
 	xs.Xs.write online_path "0";
 
 	debug "Device.Vif.hard_shutdown about to blow away frontend";
-	let frontend_path = frontend_path_of_device ~xs x in
-	Generic.safe_rm xs frontend_path;
+	Generic.safe_rm xs (frontend_ro_path_of_device ~xs x);
+	Generic.safe_rm xs (frontend_rw_path_of_device ~xs x);
 	
 	ignore_string (Watch.wait_for ~xs (unplug_watch ~xs x));
 
