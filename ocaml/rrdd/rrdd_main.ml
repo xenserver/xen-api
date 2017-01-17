@@ -160,6 +160,9 @@ module Meminfo = struct
 			| Failure("int_of_string") ->
 				debug "Couldn't parse meminfo_free value from path %s; forgetting last known memfree value for domain %d" path d;
 				current_meminfofree_values := IntMap.remove d !current_meminfofree_values
+			| exn ->
+				error "Unexpected error: '%s' when reading path %s; forgetting last known memfree value for domain %d" (Printexc.to_string exn) path d;
+				current_meminfofree_values := IntMap.remove d !current_meminfofree_values
 
 	let watch_fired xc xs path domains _ =
 		match List.filter (fun x -> x <> "") (Stringext.String.split '/' path) with
