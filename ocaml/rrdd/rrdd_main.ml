@@ -153,8 +153,15 @@ module Meminfo = struct
 				let meminfo_free = Int64.of_string (xs.Xs.read path) in
 				debug "memfree has changed to %Ld in domain %d" meminfo_free d;
 				current_meminfofree_values := IntMap.add d meminfo_free !current_meminfofree_values
-			with Xenbus.Xb.Noent ->
+			with
+			  Xenbus.Xb.Noent ->
 				debug "Couldn't read path %s; forgetting last known memfree value for domain %d" path d;
+				current_meminfofree_values := IntMap.remove d !current_meminfofree_values
+			| Failure("int_of_string") ->
+				debug "Couldn't parse meminfo_free value from path %s; forgetting last known memfree value for domain %d" path d;
+				current_meminfofree_values := IntMap.remove d !current_meminfofree_values
+			| exn ->
+				error "Unexpected error: '%s' when reading path %s; forgetting last known memfree value for domain %d" (Printexc.to_string exn) path d;
 				current_meminfofree_values := IntMap.remove d !current_meminfofree_values
 
 	let watch_fired xc xs path domains _ =
