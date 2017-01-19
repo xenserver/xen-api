@@ -2,7 +2,7 @@
 
 Summary: xapi - xen toolstack for XCP
 Name:    xapi
-Version: 1.9.57
+Version: 1.22.0
 Release: @RPM_RELEASE@
 Group:   System/Hypervisor
 License: LGPL+linking exception
@@ -17,7 +17,6 @@ BuildRequires: ocaml-camlp4-devel
 BuildRequires: ocaml-findlib
 BuildRequires: ocaml-ocamldoc
 BuildRequires: pam-devel
-BuildRequires: tetex-latex
 BuildRequires: xen-devel
 BuildRequires: libffi-devel
 BuildRequires: zlib-devel
@@ -38,6 +37,7 @@ BuildRequires: ocaml-stdext-devel
 BuildRequires: ocaml-tapctl-devel
 BuildRequires: ocaml-cmdliner-devel
 BuildRequires: ocaml-opasswd-devel
+BuildRequires: ocaml-sha-devel
 BuildRequires: git
 BuildRequires: ocaml-xcp-inventory-devel
 BuildRequires: ocaml-xenstore-devel
@@ -156,56 +156,33 @@ mkdir $RPM_BUILD_ROOT/etc/xapi.conf.d
 rm -rf $RPM_BUILD_ROOT
 
 %post core
-case $1 in
-  1) # install
-    /sbin/chkconfig --add save-boot-info
-    /sbin/chkconfig --add attach-static-vdis
-    /sbin/chkconfig --add xapi
-    /sbin/chkconfig --add xapi-domains
-    /sbin/chkconfig --add perfmon
-    /sbin/chkconfig --add genptoken
-    ;;
-  2) # upgrade
-    /sbin/chkconfig --del save-boot-info
-    /sbin/chkconfig --del attach-static-vdis
-    /sbin/chkconfig --del xapi
-    /sbin/chkconfig --del xapi-domains
-    /sbin/chkconfig --del perfmon
-    /sbin/chkconfig --del genptoken
-    /sbin/chkconfig --add save-boot-info
-    /sbin/chkconfig --add attach-static-vdis
-    /sbin/chkconfig --add xapi
-    /sbin/chkconfig --add xapi-domains
-    /sbin/chkconfig --add perfmon
-    /sbin/chkconfig --add genptoken
-    ;;
-esac
 %systemd_post cdrommon@.service
+%systemd_post xapi-domains.service
+%systemd_post perfmon.service
+%systemd_post genptoken.service
+%systemd_post xapi.service
+%systemd_post attach-static-vdis.service
+%systemd_post save-boot-info.service
+%systemd_post mpathalert.service
 
 %preun core
-case $1 in
-  0) # uninstall
-    /sbin/service message-switch stop >/dev/null 2>&1 || :
-    /sbin/service save-boot-info stop >/dev/null 2>&1 || :
-    /sbin/service attach-static-vdis >/dev/null 2>&1 || :
-    /sbin/service xapi >/dev/null 2>&1 || :
-    /sbin/service xapi-domains >/dev/null 2>&1 || :
-    /sbin/service perfmon >/dev/null 2>&1 || :
-    /sbin/service genptoken >/dev/null 2>&1 || :
-    /sbin/chkconfig --del save-boot-info
-    /sbin/chkconfig --del attach-static-vdis
-    /sbin/chkconfig --del xapi
-    /sbin/chkconfig --del xapi-domains
-    /sbin/chkconfig --del perfmon
-    /sbin/chkconfig --del genptoken
-    ;;
-  1) # upgrade
-    ;;
-esac
 %systemd_preun cdrommon@.service
+%systemd_preun xapi-domains.service
+%systemd_preun perfmon.service
+%systemd_preun xapi.service
+%systemd_preun attach-static-vdis.service
+%systemd_preun save-boot-info.service
+%systemd_preun mpathalert.service
 
 %postun core
 %systemd_postun_with_restart cdrommon@.service
+%systemd_postun xapi-domains.service
+%systemd_postun_with_restart perfmon.service
+%systemd_postun_with_restart genptoken.service
+%systemd_postun_with_restart xapi.service
+%systemd_postun_with_restart attach-static-vdis.service
+%systemd_postun_with_restart save-boot-info.service
+%systemd_postun_with_restart mpathalert.service
 
 %files core -f core-files
 %defattr(-,root,root,-)
@@ -215,14 +192,11 @@ esac
 /etc/pam.d/xapi
 /etc/cron.d/xapi-logrotate.cron
 /etc/cron.daily/license-check
-/etc/rc.d/init.d/management-interface
-/etc/rc.d/init.d/perfmon
-/etc/rc.d/init.d/xapi
-/etc/rc.d/init.d/xapi-domains
+@OPTDIR@/libexec/legacy-management-interface
+@OPTDIR@/libexec/xapi-init
 @OPTDIR@/libexec/xapissl
-/etc/rc.d/init.d/genptoken
-/etc/rc.d/init.d/attach-static-vdis
-/etc/rc.d/init.d/save-boot-info
+@OPTDIR@/libexec/attach-static-vdis
+@OPTDIR@/libexec/save-boot-info
 %config(noreplace) /etc/sysconfig/perfmon
 %config(noreplace) /etc/sysconfig/xapi
 /etc/xapi.conf.d
@@ -281,9 +255,7 @@ esac
 @OPTDIR@/bin/xe-enable-ipv6
 /etc/bash_completion.d/xe-switch-network-backend
 @OPTDIR@/bin/xsh
-@OPTDIR@/gpg/pubring.gpg
-@OPTDIR@/gpg/secring.gpg
-@OPTDIR@/gpg/trustdb.gpg
+%attr(700, root, root) @OPTDIR@/gpg
 /etc/xensource/bugtool/xapi.xml
 /etc/xensource/bugtool/xapi/stuff.xml
 /etc/xensource/bugtool/xenopsd.xml
@@ -349,10 +321,17 @@ esac
 @OPTDIR@/debug/debug_ha_query_liveset
 @OPTDIR@/debug/event_listen
 @OPTDIR@/debug/graph
-@OPTDIR@/debug/sm_stress
+@OPTDIR@/debug/import-update-key
 @OPTDIR@/debug/vncproxy
 @OPTDIR@/debug/with-vdi
 %{_unitdir}/cdrommon@.service
+%{_unitdir}/xapi-domains.service
+%{_unitdir}/perfmon.service
+%{_unitdir}/genptoken.service
+%{_unitdir}/xapi.service
+%{_unitdir}/attach-static-vdis.service
+%{_unitdir}/save-boot-info.service
+%{_unitdir}/mpathalert.service
 
 %files xe
 %defattr(-,root,root,-)
@@ -362,18 +341,14 @@ esac
 
 %files tests
 %defattr(-,root,root,-)
-@OPTDIR@/debug/cli-rt-domu-shar.sh
-@OPTDIR@/debug/cli_test
-@OPTDIR@/debug/install-debian-pv-inside.sh
-@OPTDIR@/debug/install-debian-pv.sh
-@OPTDIR@/debug/myfirstpatch.asc
 @OPTDIR@/debug/perftest
 @OPTDIR@/debug/quicktest
 @OPTDIR@/debug/quicktestbin
-/cli-rt/*
 
 %files client-devel
 %defattr(-,root,root,-)
+%{_libdir}/ocaml/xapi-types/*
+%{_libdir}/ocaml/xapi-consts/*
 %{_libdir}/ocaml/xapi-client/*
 
 %files datamodel-devel

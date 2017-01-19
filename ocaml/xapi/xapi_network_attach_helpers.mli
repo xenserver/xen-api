@@ -13,13 +13,13 @@
  *)
 (** Assertion helpers used when attaching a network
  * @group Networking
- *)
- 
+*)
+
 (** Raises an exception if the network has VIFs in use on the host *)
 val assert_network_has_no_vifs_in_use_on_me :
   __context:Context.t ->
-  host:[ `host ] Ref.t -> network:[ `network ] Ref.t -> unit  
-  
+  host:[ `host ] Ref.t -> network:[ `network ] Ref.t -> unit
+
 (** Raises an exception when the [disallow_unplug] flag is set *)
 val assert_pif_disallow_unplug_not_set :
   __context:Context.t -> [ `PIF ] Ref.t -> unit
@@ -36,6 +36,11 @@ val assert_no_slave :
   __context:Context.t ->
   [ `PIF ] Ref.t ->
   unit
+
+(** Raises an exception if any network cannot be seen *)
+val assert_can_see_named_networks :
+  __context:Context.t ->
+  vm:[ `VM ]Ref.t -> host:[ `host ] Ref.t -> [ `network ] Ref.t list -> unit
 
 (** Raises an exception if the network cannot be attached. *)
 val assert_can_attach_network_on_host :

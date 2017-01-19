@@ -1,0 +1,224 @@
+#!/usr/bin/env python
+
+import xmlrpclib
+import sys
+import XenAPI
+import json
+import urllib2
+import xml.dom.minidom
+import traceback
+import subprocess
+import os
+import errno
+import re
+import shutil
+import StringIO
+import ConfigParser
+import logging
+import xcp.logger
+
+
+TMP_DIR = '/tmp/'
+UPDATE_DIR = '/var/update/'
+UPDATE_PRECHECK_FAILED_UNKNOWN_ERROR = 'UPDATE_PRECHECK_FAILED_UNKNOWN_ERROR'
+UPDATE_PRECHECK_FAILED_PREREQUISITE_MISSING = 'UPDATE_PRECHECK_FAILED_PREREQUISITE_MISSING'
+UPDATE_PRECHECK_FAILED_CONFLICT_PRESENT = 'UPDATE_PRECHECK_FAILED_CONFLICT_PRESENT'
+UPDATE_PRECHECK_FAILED_WRONG_SERVER_VERSION = 'UPDATE_PRECHECK_FAILED_WRONG_SERVER_VERSION'
+UPDATE_PRECHECK_FAILED_OUT_OF_SPACE = 'UPDATE_PRECHECK_FAILED_OUT_OF_SPACE'
+INVALID_UPDATE = 'INVALID_UPDATE'
+CANNOT_FIND_UPDATE = 'CANNOT_FIND_UPDATE'
+ERROR_MESSAGE_START = 'Error: '
+ERROR_MESSAGE_END = 'You could try '
+ERROR_MESSAGE_CONFLICTS_WITH = ' conflicts with '
+ERROR_MESSAGE_CONFLICTS = 'conflicts '
+ERROR_MESSAGE_PROCESSING_CONFLICT = '--> Processing Conflict:'
+ERROR_MESSAGE_PREREQUISITE = 'Requires: '
+ERROR_MESSAGE_VERSION_REQUIRED = 'Requires: '
+ERROR_MESSAGE_VERSION_INSTALLED = 'Installed: '
+ERROR_MESSAGE_DOWNLOAD_PACKAGE = 'Error downloading packages:\n'
+
+class PrecheckFailure(Exception):
+    pass
+
+class PrerequisiteMissing(Exception):
+    pass
+
+class ConflictPresent(Exception):
+    pass
+
+class WrongServerVersion(Exception):
+    pass
+
+class InvalidUpdate(Exception):
+    pass
+
+def success_message(result):
+    rpcparams = {'Status': 'Success', 'Value': result}
+    return xmlrpclib.dumps((rpcparams, ), '', True)
+
+
+def failure_message(code, params):
+    rpcparams = {
+        'Status': 'Failure', 'ErrorDescription': [code] + params}
+    return xmlrpclib.dumps((rpcparams, ), '', True)
+
+
+def parse_control_package(session, yum_url):
+    if yum_url.startswith('http://'):
+        update_xml = urllib2.urlopen(yum_url + '/update.xml').read()
+        xmldoc = xml.dom.minidom.parse(StringIO.StringIO(update_xml))
+    else:
+        raise PrecheckFailure('Incorrect yum repo')
+    items = xmldoc.getElementsByTagName('update')
+    if not items:
+        raise PrecheckFailure('Missing <update> in update.xml')
+    return items[0].getAttribute('control')
+
+
+def execute_precheck(session, control_package, yum_conf_file, update_precheck_file):
+    if not control_package:
+        return 'ok'
+    livepatch_messages = {'PATCH_PRECHECK_LIVEPATCH_COMPLETE': 'ok_livepatch_complete',
+                     'PATCH_PRECHECK_LIVEPATCH_INCOMPLETE': 'ok_livepatch_incomplete',
+                     'PATCH_PRECHECK_LIVEPATCH_NOT_APPLICABLE': 'ok'}
+    cmd = ['yum', 'install', '-y', '--noplugins', '-c', yum_conf_file, control_package]
+    yum_env = os.environ.copy()
+    yum_env['LANG'] = 'C'
+    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=yum_env)
+    output, _ = p.communicate()
+    xcp.logger.info('pool_update.precheck %r returncode=%r output=%r', cmd, p.returncode, output)
+    if p.returncode != 0:
+        if ERROR_MESSAGE_DOWNLOAD_PACKAGE in output:
+            raise InvalidUpdate('Missing package(s) in the update')
+
+        m = re.search('(?<=' + ERROR_MESSAGE_START + ').+$', output, flags=re.DOTALL)
+        if m:
+            errmsg = m.group()
+            errmsg = re.sub(ERROR_MESSAGE_END + '.+', '', errmsg, flags=re.DOTALL)
+            if ERROR_MESSAGE_CONFLICTS_WITH in errmsg and ERROR_MESSAGE_PROCESSING_CONFLICT in output:
+                regex = ERROR_MESSAGE_PROCESSING_CONFLICT + '(.*)' + ERROR_MESSAGE_CONFLICTS + '(.+?)\n'
+                conflict_tuples = re.findall(regex, output)
+                if len(conflict_tuples) > 0:
+                    conflict_updates = ''
+                    for tuple in conflict_tuples:
+                        conflict_updates += tuple[1] + ' '
+                    raise ConflictPresent(conflict_updates.rstrip())
+                else:
+                    raise PrecheckFailure(errmsg)
+            elif ERROR_MESSAGE_VERSION_REQUIRED in errmsg and ERROR_MESSAGE_VERSION_INSTALLED in errmsg:
+                regex = ERROR_MESSAGE_VERSION_REQUIRED + '(.+?)\n.+ {2,2}(.+)$'
+                match = re.search(regex, errmsg, flags=re.DOTALL)
+                if match:
+                    required_version = match.group(1).rstrip()
+                    installed_version = match.group(2).rstrip()
+                    raise WrongServerVersion(required_version, installed_version)
+                else:
+                    raise PrecheckFailure(errmsg)
+            elif ERROR_MESSAGE_PREREQUISITE in errmsg:
+                regex = ERROR_MESSAGE_PREREQUISITE + '(.+?)\n'
+                prerequisite_list = re.findall(regex, errmsg)
+                if len(prerequisite_list) > 0:
+                    prerequisite_updates = ''
+                    for prerequisite in prerequisite_list:
+                        prerequisite_updates += prerequisite + ' '
+                    raise PrerequisiteMissing(prerequisite_updates.rstrip())
+                else:
+                    raise PrecheckFailure(errmsg)
+            else:
+                raise PrecheckFailure(errmsg)
+        else:
+            raise PrecheckFailure(output)
+
+    if os.path.isfile(update_precheck_file):
+        pp = subprocess.Popen(update_precheck_file, shell=False, stdout=subprocess.PIPE, close_fds=True)
+        precheck_output, _ = pp.communicate()
+        xcp.logger.info('pool_update.precheck %r precheck_output=%r', update_precheck_file, precheck_output)
+        if pp.returncode != 0:
+            raise PrecheckFailure(precheck_output)
+        else:
+            if '\n' in precheck_output:
+                msg = precheck_output.split()[0]
+                if msg in livepatch_messages.keys():
+                    return livepatch_messages[msg]
+    return 'ok'
+
+
+if __name__ == '__main__':
+    xcp.logger.logToSyslog(level=logging.INFO)
+    txt = sys.stdin.read()
+    params, method = xmlrpclib.loads(txt)
+
+    session = None
+    try:
+        session = XenAPI.xapi_local()
+        session.xenapi.login_with_password('root', '', '', 'Pool_update')
+
+        update = params[1]
+        host = params[2]
+        update_uuid = session.xenapi.pool_update.get_uuid(update)
+        update_package = session.xenapi.pool_update.get_name_label(update)
+        host_uuid = session.xenapi.host.get_uuid(host)
+        host_name_label = session.xenapi.host.get_name_label(host)
+
+        update_vdi_valid = False
+        update_vdi = session.xenapi.pool_update.get_vdi(update)
+        try:
+            update_vdi_uuid = session.xenapi.VDI.get_uuid(update_vdi)
+            update_vdi_valid = True
+        except Exception as e:
+            print(failure_message(CANNOT_FIND_UPDATE, []))
+            sys.exit(0)
+
+        # verify that dom0 has enough space to install the package
+        statvfs = os.statvfs('/')
+        available_dom0_disk_size = statvfs.f_frsize * statvfs.f_bavail
+        try:
+            required_size = int(int(session.xenapi.pool_update.get_installation_size(update)) * 1.5)
+            if required_size > available_dom0_disk_size:
+                print(failure_message(UPDATE_PRECHECK_FAILED_OUT_OF_SPACE,
+                    [update_package, str(available_dom0_disk_size), str(required_size)]))
+                sys.exit(0)
+        except:
+            print(failure_message(INVALID_UPDATE, ["Issue with <installation-size> in update.xml"]))
+            sys.exit(0)
+
+        # attach and get the yum configuration
+        # generate the yum configuration file
+        yum_conf = session.xenapi.pool_update.attach(update)
+        yum_conf_file = os.path.join(TMP_DIR, update_uuid, 'yum.conf')
+        try:
+            os.makedirs(os.path.dirname(yum_conf_file))
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                pass
+            else:
+                raise
+        with open(yum_conf_file, "w+") as file:
+            file.write(yum_conf)
+
+        config = ConfigParser.ConfigParser()
+        config.read(yum_conf_file)
+        yum_url = config.get(update_package, 'baseurl')
+
+        control_package = parse_control_package(session, yum_url)
+        update_precheck_file = os.path.join(UPDATE_DIR, update_uuid, 'precheck')
+        print(success_message(execute_precheck(session, control_package, yum_conf_file, update_precheck_file)))
+    except PrerequisiteMissing as e:
+        print(failure_message(UPDATE_PRECHECK_FAILED_PREREQUISITE_MISSING, [update_package, str(e)]))
+    except ConflictPresent as e:
+        print(failure_message(UPDATE_PRECHECK_FAILED_CONFLICT_PRESENT, [update_package, str(e)]))
+    except WrongServerVersion as e:
+        required_version, installed_version = e.args
+        print(failure_message(UPDATE_PRECHECK_FAILED_WRONG_SERVER_VERSION, [update_package, installed_version, required_version]))
+    except InvalidUpdate as e:
+        print(failure_message(INVALID_UPDATE, [update_package, str(e)]))
+    except Exception as e:
+        print(failure_message(UPDATE_PRECHECK_FAILED_UNKNOWN_ERROR, [update_package, str(e)]))
+    finally:
+        if session is not None and update_vdi_valid is True:
+            session.xenapi.pool_update.detach(update)
+            session.xenapi.session.logout()
+        try:
+            shutil.rmtree(os.path.dirname(yum_conf_file))
+        except Exception as e:
+            pass

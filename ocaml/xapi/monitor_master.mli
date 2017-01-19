@@ -14,7 +14,7 @@
 
 (** Pushing object properties to database.
  * @group Property Monitoring
- *)
+*)
 
 (** This module implements the saving of properties for various objects (e.g.
  * VIFs, CPUs) into xapi's database. It is also used to regularly update
@@ -26,6 +26,3 @@ val update_configuration_from_master : unit -> unit
 
 (** A function to write information about PIFs to xapi's database. *)
 val update_pifs : __context:Context.t -> 'a Ref.t -> Monitor_types.pif list -> unit
-
-(** A function to write information about a host to xapi's database. *)
-val update_all : __context:Context.t -> Monitor_types.host_stats -> unit

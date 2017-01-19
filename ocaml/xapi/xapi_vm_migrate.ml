@@ -20,6 +20,7 @@
     co-ordinate tapdisk locking. We have not got code for this.
 *)
 
+open Stdext
 open Pervasiveext
 open Printf
 open Threadext
@@ -40,7 +41,7 @@ let _master = "master"
 
 type remote = {
   rpc : Rpc.call -> Rpc.response;
-  session : API.ref_session;  
+  session : API.ref_session;
   sm_url : string;
   xenops_url : string;
   master_url : string;
@@ -52,7 +53,7 @@ type remote = {
 let get_ip_from_url url =
   match Http.Url.of_string url with
   | Http.Url.Http { Http.Url.host = host }, _ -> host
-  | _, _ -> failwith (Printf.sprintf "Cannot extract foreign IP address from: %s" url) 
+  | _, _ -> failwith (Printf.sprintf "Cannot extract foreign IP address from: %s" url)
 
 let remote_of_dest dest =
   let master_url = List.assoc _master dest in
@@ -81,8 +82,8 @@ let with_migrate f =
   Mutex.execute nmutex (fun () ->
       if !number = 3 then raise (Api_errors.Server_error (Api_errors.too_many_storage_migrates,["3"]));
       incr number);
-  finally f (fun () -> 
-      Mutex.execute nmutex (fun () ->			
+  finally f (fun () ->
+      Mutex.execute nmutex (fun () ->
           decr number))
 
 module XenAPI = Client
@@ -92,30 +93,49 @@ open Storage_interface
 open Listext
 open Fun
 
-let assert_sr_support_migration ~__context ~vdi_map ~remote =
+let assert_sr_support_operations ~__context ~vdi_map ~remote ~ops =
+  let op_supported_on_source_sr vdi ops =
+    (* Check VDIs must not be present on SR which doesn't have required capability *)
+    let source_sr = Db.VDI.get_SR ~__context ~self:vdi in
+    let sr_record = Db.SR.get_record_internal ~__context ~self:source_sr in
+    let sr_features = Xapi_sr_operations.features_of_sr ~__context sr_record in
+    if not (List.for_all (fun op -> Smint.(has_capability op sr_features)) ops) then
+      raise (Api_errors.Server_error(Api_errors.sr_does_not_support_migration, [Ref.string_of source_sr]));
+  in
+  let op_supported_on_dest_sr sr ops sm_record remote =
+    (* Check VDIs must not be mirrored to SR which doesn't have required capability *)
+    let sr_type = XenAPI.SR.get_type remote.rpc remote.session sr in
+    let sm_capabilities =
+      match List.filter (fun (_, r) -> r.API.sM_type = sr_type) sm_record with
+      | [ _, plugin ] -> plugin.API.sM_capabilities
+      | _ -> []
+    in
+    if not (List.for_all (fun op -> List.mem Smint.(string_of_capability op) sm_capabilities) ops) then
+      raise (Api_errors.Server_error(Api_errors.sr_does_not_support_migration, [Ref.string_of sr]))
+  in
+  let is_sr_matching local_vdi_ref remote_sr_ref =
+    let source_sr_ref = Db.VDI.get_SR ~__context ~self:local_vdi_ref in
+    (* relax_xsm_sr_check is used to enable XSM to out-of-pool SRs with matching UUID *)
+    if !Xapi_globs.relax_xsm_sr_check then
+      begin
+        let source_sr_uuid = Db.SR.get_uuid ~__context ~self:source_sr_ref in
+        let dest_sr_uuid = XenAPI.SR.get_uuid remote.rpc remote.session remote_sr_ref in
+        dest_sr_uuid = source_sr_uuid
+      end
+    else
+      (* Don't fail if source and destination SR for all VDIs are same *)
+      source_sr_ref = remote_sr_ref
+  in
   (* Get destination host SM record *)
   let sm_record = XenAPI.SM.get_all_records remote.rpc remote.session in
-  List.iter (fun (vdi, sr) ->
-      (* Check VDIs must not be present on SR which doesn't have snapshot capability *)
-      let source_sr = Db.VDI.get_SR ~__context ~self:vdi in
-      let sr_record = Db.SR.get_record_internal ~__context ~self:source_sr in
-      let sr_features = Xapi_sr_operations.features_of_sr ~__context sr_record in
-      if not Smint.(has_capability Vdi_snapshot sr_features) then
-        raise (Api_errors.Server_error(Api_errors.sr_does_not_support_migration, [Ref.string_of source_sr]));
-      (* Check VDIs must not be mirrored to SR which doesn't have snapshot capability *)
-      let sr_type = XenAPI.SR.get_type remote.rpc remote.session sr in
-      let sm_capabilities =
-        match List.filter (fun (_, r) -> r.API.sM_type = sr_type) sm_record with
-        | [ _, plugin ] -> plugin.API.sM_capabilities
-        | _ -> []
-      in
-      if not (List.exists (fun cp -> cp = Smint.(string_of_capability Vdi_snapshot)) sm_capabilities) then
-        raise (Api_errors.Server_error(Api_errors.sr_does_not_support_migration, [Ref.string_of sr]))
-    ) vdi_map
+  List.filter (fun (vdi,sr) -> not (is_sr_matching vdi sr)) vdi_map
+  |> List.iter (fun (vdi, sr) ->
+      op_supported_on_source_sr vdi ops;
+      op_supported_on_dest_sr sr ops sm_record remote;
+    )
 
 let assert_licensed_storage_motion ~__context =
   Pool_features.assert_enabled ~__context ~f:Features.Storage_motion
-
 
 let rec migrate_with_retries ~__context queue_name max try_no dbg vm_uuid xenops_vdi_map xenops_vif_map xenops =
   let open Xapi_xenops_queue in
@@ -134,7 +154,7 @@ let rec migrate_with_retries ~__context queue_name max try_no dbg vm_uuid xenops
     (* CA-86347 Handle the excn if the VM happens to reboot during migration.
        		 * Such a reboot causes Xenops_interface.Cancelled the first try, then
        		 * Xenops_interface.Internal_error("End_of_file") the second, then success. *)
-    with 
+    with
     (* User cancelled migration *)
     | Xenops_interface.Cancelled _ as e when TaskHelper.is_cancelling ~__context ->
       debug "xenops: Migration cancelled by user.";
@@ -148,7 +168,7 @@ let rec migrate_with_retries ~__context queue_name max try_no dbg vm_uuid xenops
       migrate_with_retries ~__context queue_name max (try_no + 1) dbg vm_uuid xenops_vdi_map xenops_vif_map xenops
 
     (* Something else went wrong *)
-    | e -> 
+    | e ->
       debug "xenops: not retrying migration: caught %s from %s in attempt %d of %d."
         (Printexc.to_string e) !progress try_no max;
       raise e
@@ -156,6 +176,16 @@ let rec migrate_with_retries ~__context queue_name max try_no dbg vm_uuid xenops
 
 let migrate_with_retry ~__context queue_name dbg vm_uuid xenops_vdi_map xenops_vif_map xenops =
   migrate_with_retries ~__context queue_name 3 1 dbg vm_uuid xenops_vdi_map xenops_vif_map xenops
+
+(** detach the network of [vm] if it is migrating away to [destination] *)
+let detach_local_network_for_vm ~__context ~vm ~destination =
+  let src, dst = Helpers.get_localhost ~__context, destination in
+  let ref      = Ref.string_of in
+  if src <> dst then begin
+    info "VM %s migrated from %s to %s - detaching VM's network at source"
+      (ref vm) (ref src) (ref dst);
+    Xapi_network.detach_for_vm ~__context ~host:src ~vm;
+  end (* else: localhost migration - nothing to do *)
 
 let pool_migrate ~__context ~vm ~host ~options =
   if (not (Pool_features.is_enabled ~__context Features.Xen_motion)) then
@@ -178,6 +208,7 @@ let pool_migrate ~__context ~vm ~host ~options =
             Xapi_xenops.Xenopsd_metadata.delete ~__context vm_uuid;
           );
         Rrdd_proxy.migrate_rrd ~__context ~vm_uuid ~host_uuid:(Ref.string_of host) ();
+        detach_local_network_for_vm ~__context ~vm ~destination:host;
         Helpers.call_api_functions ~__context (fun rpc session_id ->
             XenAPI.VM.pool_migrate_complete rpc session_id vm host
           );
@@ -278,9 +309,9 @@ let inter_pool_metadata_transfer ~__context ~remote ~vm ~vdi_map ~vif_map ~dry_r
       Db.VDI.remove_from_other_config ~__context ~self:vdi
         ~key:Constants.storage_migrate_vdi_map_key;
       Opt.iter (fun remote_vdi_reference ->
-        Db.VDI.add_to_other_config ~__context ~self:vdi
-          ~key:Constants.storage_migrate_vdi_map_key
-          ~value:(Ref.string_of remote_vdi_reference))
+          Db.VDI.add_to_other_config ~__context ~self:vdi
+            ~key:Constants.storage_migrate_vdi_map_key
+            ~value:(Ref.string_of remote_vdi_reference))
         vdi_record.remote_vdi_reference) vdi_map;
 
   List.iter (fun vif_record ->
@@ -302,15 +333,15 @@ let inter_pool_metadata_transfer ~__context ~remote ~vm ~vdi_map ~vif_map ~dry_r
        (* Make sure we clean up the remote VDI and VIF mapping keys. *)
        List.iter
          (fun vdi_record ->
-           Db.VDI.remove_from_other_config ~__context
-             ~self:vdi_record.local_vdi_reference
-             ~key:Constants.storage_migrate_vdi_map_key)
+            Db.VDI.remove_from_other_config ~__context
+              ~self:vdi_record.local_vdi_reference
+              ~key:Constants.storage_migrate_vdi_map_key)
          vdi_map;
        List.iter
          (fun vif_record ->
-           Db.VIF.remove_from_other_config ~__context
-             ~self:vif_record.local_vif_reference
-             ~key:Constants.storage_migrate_vif_map_key)
+            Db.VIF.remove_from_other_config ~__context
+              ~self:vif_record.local_vif_reference
+              ~key:Constants.storage_migrate_vif_map_key)
          vif_map)
 
 module VDIMap = Map.Make(struct type t = API.ref_VDI let compare = compare end)
@@ -493,119 +524,117 @@ let vdi_copy_fun __context dbg vdi_map remote is_intra_pool remote_vdis so_far t
       (not is_intra_pool) || (dest_sr_uuid <> vconf.sr)
   in
 
-  let remote_vdi,remote_vdi_reference,newdp,mirror_id =
-    if not mirror then
-      let dest_vdi_ref = XenAPI.VDI.get_by_uuid remote.rpc remote.session vdi_uuid in
-      vconf.location,dest_vdi_ref,None,None
-    else begin
-      let newdp = Printf.sprintf (if vconf.do_mirror then "mirror_%s" else "copy_%s") vconf.dp in
-      (* DP set up is only essential for MIRROR.start/stop due to their open ended pattern.
-         It's not necessary for copy which will take care of that itself。*)
-      if vconf.do_mirror then begin
+  let with_new_dp cont =
+    let dp = Printf.sprintf (if vconf.do_mirror then "mirror_%s" else "copy_%s") vconf.dp in
+    try cont dp
+    with e ->
+      (try SMAPI.DP.destroy ~dbg ~dp ~allow_leak:false with _ -> info "Failed to cleanup datapath: %s" dp);
+      raise e in
+
+  let with_remote_vdi remote_vdi cont =
+    debug "Executing remote scan to ensure VDI is known to xapi";
+    XenAPI.SR.scan remote.rpc remote.session dest_sr_ref;
+    let query = Printf.sprintf "(field \"location\"=\"%s\") and (field \"SR\"=\"%s\")" remote_vdi (Ref.string_of dest_sr_ref) in
+    let vdis = XenAPI.VDI.get_all_records_where remote.rpc remote.session query in
+    let remote_vdi_ref = match vdis with
+      | [] -> raise (Api_errors.Server_error(Api_errors.vdi_location_missing, [Ref.string_of dest_sr_ref; remote_vdi]))
+      | h :: [] -> debug "Found remote vdi reference: %s" (Ref.string_of (fst h)); fst h
+      | _ -> raise (Api_errors.Server_error(Api_errors.location_not_unique, [Ref.string_of dest_sr_ref; remote_vdi])) in
+    try cont remote_vdi_ref
+    with e ->
+      (try XenAPI.VDI.destroy remote.rpc remote.session remote_vdi_ref with _ -> error "Failed to destroy remote VDI");
+      raise e in
+
+  let get_mirror_record ?new_dp remote_vdi remote_vdi_reference =
+    { mr_dp = new_dp;
+      mr_mirrored = mirror;
+      mr_local_sr = vconf.sr;
+      mr_local_vdi = vconf.location;
+      mr_remote_sr = dest_sr_uuid;
+      mr_remote_vdi = remote_vdi;
+      mr_local_xenops_locator = vconf.xenops_locator;
+      mr_remote_xenops_locator = Xapi_xenops.xenops_vdi_locator_of_strings dest_sr_uuid remote_vdi;
+      mr_local_vdi_reference = vconf.vdi;
+      mr_remote_vdi_reference = remote_vdi_reference } in
+
+  let mirror_to_remote new_dp =
+    let task =
+      if not vconf.do_mirror then
+        SMAPI.DATA.copy ~dbg ~sr:vconf.sr ~vdi:vconf.location ~dp:new_dp ~url:remote.sm_url ~dest:dest_sr_uuid
+      else begin
         (* Though we have no intention of "write", here we use the same mode as the
            associated VBD on a mirrored VDIs (i.e. always RW). This avoids problem
            when we need to start/stop the VM along the migration. *)
         let read_write = true in
-        ignore(SMAPI.VDI.attach ~dbg ~dp:newdp ~sr:vconf.sr ~vdi:vconf.location ~read_write);
-        SMAPI.VDI.activate ~dbg ~dp:newdp ~sr:vconf.sr ~vdi:vconf.location;
-      end;
+        (* DP set up is only essential for MIRROR.start/stop due to their open ended pattern.
+           It's not necessary for copy which will take care of that itself. *)
+        ignore(SMAPI.VDI.attach ~dbg ~dp:new_dp ~sr:vconf.sr ~vdi:vconf.location ~read_write);
+        SMAPI.VDI.activate ~dbg ~dp:new_dp ~sr:vconf.sr ~vdi:vconf.location;
+        ignore(Storage_access.register_mirror __context vconf.location);
+        SMAPI.DATA.MIRROR.start ~dbg ~sr:vconf.sr ~vdi:vconf.location ~dp:new_dp ~url:remote.sm_url ~dest:dest_sr_uuid
+      end in
 
-      let mapfn =
-        let start = (Int64.to_float !so_far) /. (Int64.to_float total_size) in
-        let len = (Int64.to_float vconf.size) /. (Int64.to_float total_size) in
-        fun x -> start +. x *. len
-      in
+    let mapfn x =
+      let total = Int64.to_float total_size in
+      let done_ = Int64.to_float !so_far /. total in
+      let remaining = Int64.to_float vconf.size /. total in
+      done_ +. x *. remaining in
 
-      let task = if not vconf.do_mirror then
-          SMAPI.DATA.copy ~dbg ~sr:vconf.sr ~vdi:vconf.location ~dp:newdp ~url:remote.sm_url ~dest:dest_sr_uuid
-        else begin
-          ignore(Storage_access.register_mirror __context vconf.location);
-          SMAPI.DATA.MIRROR.start ~dbg ~sr:vconf.sr ~vdi:vconf.location ~dp:newdp ~url:remote.sm_url ~dest:dest_sr_uuid
-        end
-      in
-      
-      let open Storage_access in
-      let task_result =
-        task |> register_task __context
-        |> add_to_progress_map mapfn
-        |> wait_for_task dbg
-        |> remove_from_progress_map
-        |> unregister_task __context
-        |> success_task dbg in
-      
-      let vdi, mirror_id =
-        if not vconf.do_mirror
-        then begin
-          let vdi = task_result |> vdi_of_task dbg in
-          remote_vdis := vdi.vdi :: !remote_vdis;
-          vdi.vdi,None
-        end else begin
-          let mirror_id = task_result |> mirror_of_task dbg in
-          let m = SMAPI.DATA.MIRROR.stat ~dbg ~id:mirror_id in
-          m.Mirror.dest_vdi, Some mirror_id
-        end
-      in
-      
-      so_far := Int64.add !so_far vconf.size;
-      
-      debug "Local VDI %s mirrored to %s" vconf.location vdi;
-      debug "Executing remote scan to ensure VDI is known to xapi";
-      XenAPI.SR.scan remote.rpc remote.session dest_sr_ref;
-      let query = Printf.sprintf "(field \"location\"=\"%s\") and (field \"SR\"=\"%s\")" vdi (Ref.string_of dest_sr_ref) in
-      let vdis = XenAPI.VDI.get_all_records_where remote.rpc remote.session query in
-      
-      if List.length vdis <> 1 then error "Could not locate remote VDI: query='%s', length of results: %d" query (List.length vdis);
-      
-      let remote_vdi_reference = fst (List.hd vdis) in
-      
-      debug "Found remote vdi reference: %s" (Ref.string_of remote_vdi_reference);
-      vdi, remote_vdi_reference, (Some newdp), mirror_id
-    end
-  in
-  let mirror_record = ({ mr_dp = newdp;
-                         mr_mirrored = mirror;
-                         mr_local_sr = vconf.sr;
-                         mr_local_vdi = vconf.location;
-                         mr_remote_sr = dest_sr_uuid;
-                         mr_remote_vdi = remote_vdi;
-                         mr_local_xenops_locator = vconf.xenops_locator;
-                         mr_remote_xenops_locator = Xapi_xenops.xenops_vdi_locator_of_strings dest_sr_uuid remote_vdi;
-                         mr_local_vdi_reference = vconf.vdi;
-                         mr_remote_vdi_reference = remote_vdi_reference; }) in
-  try
-    let result = continuation mirror_record in
-    
-    (match mirror_id with
-     | Some mid -> ignore(Storage_access.unregister_mirror mid);
-     | None -> ());
-              
-    if mirror && not (Xapi_fist.storage_motion_keep_vdi () || copy)
-    then
-      Helpers.call_api_functions ~__context (fun rpc session_id ->
-          XenAPI.VDI.destroy rpc session_id vconf.vdi);
-    
-    result
-  with e ->
-    (* Stop mirroring and check to see if it was us that caused the mirror failure *)
-    let mirror_failed = 
-      match mirror_id with
-      | Some mid ->
-        (try SMAPI.DATA.MIRROR.stop ~dbg ~id:mid with _ -> ());
-        let m = SMAPI.DATA.MIRROR.stat ~dbg ~id:mid in
-        m.Mirror.failed
-      | None ->
-        false
-    in
+    let open Storage_access in
 
-    (* Now that mirroring has finished, clean up any datapath we made *)
-    (match newdp with | Some dp -> (try SMAPI.DP.destroy ~dbg ~dp ~allow_leak:false with _ -> error "Failed to cleanup datapath: %s" dp) | None -> ());
+    let task_result =
+      task |> register_task __context
+      |> add_to_progress_map mapfn
+      |> wait_for_task dbg
+      |> remove_from_progress_map
+      |> unregister_task __context
+      |> success_task dbg in
 
-    (* And destroy the new VDI *)
-    (try XenAPI.VDI.destroy remote.rpc remote.session remote_vdi_reference with _ -> error "Failed to destroy remote VDI");
+    let mirror_id, remote_vdi =
+      if not vconf.do_mirror then
+        let vdi = task_result |> vdi_of_task dbg in
+        remote_vdis := vdi.vdi :: !remote_vdis;
+        None, vdi.vdi
+      else
+        let mirrorid = task_result |> mirror_of_task dbg in
+        let m = SMAPI.DATA.MIRROR.stat ~dbg ~id:mirrorid in
+        Some mirrorid, m.Mirror.dest_vdi in
 
-    if mirror_failed then raise (Api_errors.Server_error(Api_errors.mirror_failed,[Ref.string_of vconf.vdi]));
-    
-    raise e
+    so_far := Int64.add !so_far vconf.size;
+    debug "Local VDI %s %s to %s" vconf.location (if vconf.do_mirror then "mirrored" else "copied") remote_vdi;
+    mirror_id, remote_vdi in
+
+  let post_mirror mirror_id mirror_record =
+    try
+      let result = continuation mirror_record in
+      (match mirror_id with
+       | Some mid -> ignore(Storage_access.unregister_mirror mid);
+       | None -> ());
+      if mirror && not (Xapi_fist.storage_motion_keep_vdi () || copy) then
+        Helpers.call_api_functions ~__context (fun rpc session_id ->
+            XenAPI.VDI.destroy rpc session_id vconf.vdi);
+      result
+    with e ->
+      let mirror_failed =
+        match mirror_id with
+        | Some mid ->
+          ignore(Storage_access.unregister_mirror mid);
+          (try SMAPI.DATA.MIRROR.stop ~dbg ~id:mid with _ -> ());
+          let m = SMAPI.DATA.MIRROR.stat ~dbg ~id:mid in
+          m.Mirror.failed
+        | None -> false in
+      if mirror_failed then raise (Api_errors.Server_error(Api_errors.mirror_failed,[Ref.string_of vconf.vdi]))
+      else raise e in
+
+  if mirror then
+    with_new_dp (fun new_dp ->
+        let mirror_id, remote_vdi = mirror_to_remote new_dp in
+        with_remote_vdi remote_vdi (fun remote_vdi_ref ->
+            let mirror_record = get_mirror_record ~new_dp remote_vdi remote_vdi_ref in
+            post_mirror mirror_id mirror_record))
+  else
+    let mirror_record = get_mirror_record vconf.location (XenAPI.VDI.get_by_uuid remote.rpc remote.session vdi_uuid) in
+    continuation mirror_record
 
 let wait_for_fist __context fistpoint name =
   if fistpoint () then begin
@@ -669,16 +698,16 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
   let open Xapi_xenops in
 
   let remote = remote_of_dest dest in
-  
+
   (* Copy mode means we don't destroy the VM on the source host. We also don't
      	   copy over the RRDs/messages *)
   let copy = try bool_of_string (List.assoc "copy" options) with _ -> false in
 
-  (* The first thing to do is to create mirrors of all the disks on the remote. 
+  (* The first thing to do is to create mirrors of all the disks on the remote.
      We look through the VM's VBDs and all of those of the snapshots. We then
      compile a list of all of the associated VDIs, whether we mirror them or not
-     (mirroring means we believe the VDI to be active and new writes should be 
-     mirrored to the destination - otherwise we just copy it) 
+     (mirroring means we believe the VDI to be active and new writes should be
+     mirrored to the destination - otherwise we just copy it)
 
      We look at the VDIs of the VM, the VDIs of all of the snapshots, and any
      suspend-image VDIs. *)
@@ -722,6 +751,13 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
            else (get_vdi_mirror __context vm vdi false):: acc
          else acc)
       [] vm_and_snapshots in
+
+  (* Double check that all of the suspend VDIs are all visible on the source *)
+  let localhost = Helpers.get_localhost ~__context in
+  List.iter (fun vdi_mirror ->
+      let sr = Db.VDI.get_SR ~__context ~self:vdi_mirror.vdi in
+      if not (Helpers.host_has_pbd_for_sr ~__context ~host:localhost ~sr)
+      then raise (Api_errors.Server_error (Api_errors.suspend_image_not_accessible, [ Ref.string_of vdi_mirror.vdi ]))) suspends_vdis;
 
   let dest_pool = List.hd (XenAPI.Pool.get_all remote.rpc remote.session) in
   let default_sr_ref =
@@ -814,16 +850,16 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
           let vms =
             let vdi_map =
               List.map (fun mirror_record -> {
-                  local_vdi_reference = mirror_record.mr_local_vdi_reference;
-                  remote_vdi_reference = Some mirror_record.mr_remote_vdi_reference;
-                })
+                    local_vdi_reference = mirror_record.mr_local_vdi_reference;
+                    remote_vdi_reference = Some mirror_record.mr_remote_vdi_reference;
+                  })
                 (suspends_map @ snapshots_map @ vdi_map)
             in
             let vif_map =
               List.map (fun (vif, network) -> {
-                  local_vif_reference = vif;
-                  remote_network_reference = network;
-                })
+                    local_vif_reference = vif;
+                    remote_network_reference = network;
+                  })
                 vif_map
             in
             inter_pool_metadata_transfer ~__context ~remote ~vm ~vdi_map
@@ -859,7 +895,7 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
       (* It's acceptable for the VM not to exist at this point; shutdown commutes with storage migrate *)
       begin
         try
-	  Xapi_xenops.Events_from_xenopsd.with_suppressed queue_name dbg vm_uuid
+          Xapi_xenops.Events_from_xenopsd.with_suppressed queue_name dbg vm_uuid
             (fun () ->
                migrate_with_retry ~__context queue_name dbg vm_uuid xenops_vdi_map xenops_vif_map remote.xenops_url;
                Xapi_xenops.Xenopsd_metadata.delete ~__context vm_uuid)
@@ -868,7 +904,7 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
         | Xenops_interface.Does_not_exist ("extra",_) ->
           ()
       end;
-
+      detach_local_network_for_vm ~__context ~vm ~destination:remote.dest_host;
       debug "Migration complete";
       SMPERF.debug "vm.migrate_send: migration complete vm:%s" vm_uuid;
 
@@ -913,7 +949,7 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
       (* Signal the remote pool that we're done *)
     end;
 
-    Helpers.call_api_functions ~__context (fun rpc session_id -> 
+    Helpers.call_api_functions ~__context (fun rpc session_id ->
         if not is_intra_pool && not copy then begin
           info "Destroying VM ref=%s uuid=%s" (Ref.string_of vm) vm_uuid;
           Xapi_vm_lifecycle.force_state_reset ~__context ~self:vm ~value:`Halted;
@@ -933,6 +969,17 @@ let migrate_send'  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
             Xapi_xenops.shutdown ~__context ~self:vm None;
           end;
         with _ -> ());
+
+    if not is_intra_pool && Db.is_valid_ref __context vm then begin
+      List.map (fun self -> Db.VM.get_uuid ~__context ~self) vm_and_snapshots
+      |> List.iter (fun self ->
+          try
+            let vm_ref = XenAPI.VM.get_by_uuid remote.rpc remote.session self in
+            info "Destroying stale VM uuid=%s on destination host" self;
+            XenAPI.VM.destroy remote.rpc remote.session vm_ref
+          with e -> error "Caught %s while destroying VM uuid=%s on destination host" (Printexc.to_string e) self)
+    end;
+
     let task = Context.get_task_id __context in
     let oc = Db.Task.get_other_config ~__context ~self:task in
     if List.mem_assoc "mirror_failed" oc then begin
@@ -976,35 +1023,47 @@ let assert_can_migrate  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
       debug "This is a cross-pool migration";
       `cross_pool
   in
+
+  (* operations required for migration *)
+  let required_sr_operations = [Smint.Vdi_mirror; Smint.Vdi_snapshot] in
+  let host_from = Helpers.LocalObject source_host_ref in
+
   match migration_type with
   | `intra_pool ->
     (* Prevent VMs from being migrated onto a host with a lower platform version *)
-    Helpers.assert_host_versions_not_decreasing ~__context
-      ~host_from:(Helpers.LocalObject source_host_ref)
-      ~host_to:(Helpers.LocalObject remote.dest_host);
+    let host_to = Helpers.LocalObject remote.dest_host in
+    if not (Helpers.host_versions_not_decreasing ~__context ~host_from ~host_to) then
+      raise (Api_errors.Server_error (Api_errors.not_supported_during_upgrade, []));
+
+    (* Check VDIs are not migrating to or from an SR which doesn't have required_sr_operations *)
+    assert_sr_support_operations ~__context ~vdi_map ~remote ~ops:required_sr_operations;
     if not force then Cpuid_helpers.assert_vm_is_compatible ~__context ~vm ~host:remote.dest_host ();
     let snapshot = Helpers.get_boot_record ~__context ~self:vm in
     Xapi_vm_helpers.assert_can_boot_here ~__context ~self:vm ~host:remote.dest_host ~snapshot ~do_sr_check:false ();
     if vif_map <> [] then
       raise (Api_errors.Server_error(Api_errors.operation_not_allowed, [
           "VIF mapping is not allowed for intra-pool migration"]))
+
   | `cross_pool ->
     (* Prevent VMs from being migrated onto a host with a lower platform version *)
     let host_to = Helpers.RemoteObject (remote.rpc, remote.session, remote.dest_host) in
-    Helpers.assert_host_versions_not_decreasing ~__context
-      ~host_from:(Helpers.LocalObject source_host_ref)
-      ~host_to;
+    if not (Helpers.host_versions_not_decreasing ~__context ~host_from ~host_to) then
+      raise (Api_errors.Server_error (Api_errors.vm_host_incompatible_version_migrate,
+                                      [Ref.string_of vm; Ref.string_of remote.dest_host]));
+
+    (* Check VDIs are not migrating to or from an SR which doesn't have required_sr_operations *)
+    assert_sr_support_operations ~__context ~vdi_map ~remote ~ops:required_sr_operations;
     let power_state = Db.VM.get_power_state ~__context ~self:vm in
     (* The copy mode is only allow on stopped VM *)
-    if (not force) && copy && power_state <> `Halted then raise (Api_errors.Server_error (Api_errors.vm_bad_power_state, [Ref.string_of vm; Record_util.power_to_string `Halted; Record_util.power_to_string power_state]));
+    if (not force) && copy && power_state <> `Halted then
+      raise (Api_errors.Server_error (Api_errors.vm_bad_power_state,
+                                      [Ref.string_of vm; Record_util.power_to_string `Halted; Record_util.power_to_string power_state]));
     (* Check the host can support the VM's required version of virtual hardware platform *)
     Xapi_vm_helpers.assert_hardware_platform_support ~__context ~vm ~host:host_to;
-    (* Check VDIs are not on SR which doesn't have snapshot capability *)
-    assert_sr_support_migration ~__context ~vdi_map ~remote;
-
     (*Check that the remote host is enabled and not in maintenance mode*)
     let check_host_enabled = XenAPI.Host.get_enabled remote.rpc remote.session (remote.dest_host) in
-    if not check_host_enabled then raise (Api_errors.Server_error (Api_errors.host_disabled,[Ref.string_of remote.dest_host]));
+    if not check_host_enabled then
+      raise (Api_errors.Server_error (Api_errors.host_disabled,[Ref.string_of remote.dest_host]));
 
     (* Check that the VM's required CPU features are available on the host *)
     if not force then
@@ -1015,23 +1074,24 @@ let assert_can_migrate  ~__context ~vm ~dest ~live ~vdi_map ~vif_map ~options =
     let vifs = Db.VM.get_VIFs ~__context ~self:vm in
     let snapshots = Db.VM.get_snapshots ~__context ~self:vm in
     let snapshot_vifs = List.flatten
-      (List.map (fun self -> Db.VM.get_VIFs ~__context ~self) snapshots) in
+        (List.map (fun self -> Db.VM.get_VIFs ~__context ~self) snapshots) in
     let vif_map = infer_vif_map ~__context (vifs @ snapshot_vifs) vif_map in
 
     try
       let vdi_map =
         List.map (fun (vdi, sr) -> {
-            local_vdi_reference = vdi;
-            remote_vdi_reference = None;
-          })
+              local_vdi_reference = vdi;
+              remote_vdi_reference = None;
+            })
           vdi_map in
       let vif_map =
         List.map (fun (vif, network) -> {
-            local_vif_reference = vif;
-            remote_network_reference = network;
-          })
+              local_vif_reference = vif;
+              remote_network_reference = network;
+            })
           vif_map in
-      assert (inter_pool_metadata_transfer ~__context ~remote ~vm ~vdi_map ~vif_map ~dry_run:true ~live:true ~copy = [])
+      if not (inter_pool_metadata_transfer ~__context ~remote ~vm ~vdi_map ~vif_map ~dry_run:true ~live:true ~copy = []) then
+        raise Api_errors.(Server_error(internal_error, ["assert_can_migrate: inter_pool_metadata_transfer returned a nonempty list"]))
     with Xmlrpc_client.Connection_reset ->
       raise (Api_errors.Server_error(Api_errors.cannot_contact_host, [remote.remote_ip]))
 
@@ -1071,7 +1131,7 @@ let handler req fd _ =
       let localhost = Helpers.get_localhost ~__context in
 
       (* NB this parameter will be present except when we're doing a rolling upgrade. *)
-      let memory_required_kib = 
+      let memory_required_kib =
         if List.mem_assoc _memory_required_kib req.Http.Request.query then
           Int64.of_string (List.assoc _memory_required_kib req.Http.Request.query)
         else

@@ -11,17 +11,17 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *)
-(** 
+(**
  * Verifying whether the current license is still valid
  * @group Licensing
- *)
+*)
 
 (** The expiry date that is considered to be "never". *)
 val never : float
 
 (** Returns (Some date) if the host's license has an expiry date,
  *  otherwise returns None. *)
-val get_expiry_date : __context:Context.t -> host:API.ref_host -> Date.iso8601 option
+val get_expiry_date : __context:Context.t -> host:API.ref_host -> Stdext.Date.iso8601 option
 
 (** Raises {!Api_errors.license_expired} if the current license has expired. *)
 val check_expiry : __context:Context.t -> host:API.ref_host -> unit

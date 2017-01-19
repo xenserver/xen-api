@@ -11,16 +11,17 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *)
-(** 
+(**
  * @group Command-Line Interface (CLI)
- *)
- 
+*)
+
 (* ----------------------------------------------------------------------
    XE-CLI Front End
    ---------------------------------------------------------------------- *)
 
 open Cli_util
 open Cli_cmdtable
+open Stdext
 open Xstringext
 
 module D = Debug.Make(struct let name = "cli" end)
@@ -31,42 +32,42 @@ open D
    --------------------------------------------------------------------- *)
 
 let vmselectors = ["<vm-selectors>"]
-let vmselectorsinfo = " The simplest way to select the VM on which the \
-  operation is to be performed is by supplying the argument \
-  'vm=<name or uuid>'. VMs can also be \
-  specified by filtering the full list of VMs on the values of fields. For \
-  example, specifying 'power-state=halted' will select all VMs whose \
-  power-state field is equal to 'halted'. Where multiple VMs are matching, \
-  the option '--multiple' must be specified to perform the operation. The \
-  full list of fields that can be matched can be obtained by the command \
-  'xe vm-list params=all'. If no parameters to select VMs are given, \
-  the operation will be performed on all VMs."
+let vmselectorsinfo = "VMs can be specified by filtering the full list of VMs \
+                       on the values of zero or more fields. For example, specifying \
+                       'uuid=<some_uuid>' will select only the VM with that uuid, \
+                       and 'power-state=halted' will select only VMs whose 'power-state' field \
+                       is equal to 'halted'. The special pseudo-field 'vm' matches \
+                       either of name-label or uuid. Where multiple VMs are matching, \
+                       the option '--multiple' must be specified to perform the operation. The \
+                       full list of fields that can be matched can be obtained by the command \
+                       'xe vm-list params=all'. If no parameters to select VMs are given, \
+                       the operation will be performed on all VMs."
 
 let hostselectors = ["<host-selectors>"]
-let hostselectorsinfo = " The simplest way to select the host on which the \
-  operation is to be performed is by supplying the argument \
-  'host=<name or uuid>'. Hosts can also be \
-  specified by filtering the full list of hosts on the values of fields. For \
-  example, specifying 'enabled=true' will select all hosts whose \
-  'enabled' field is equal to 'true'. Where multiple hosts are matching, \
-  and the operation can be performed on multiple hosts, the option '--multiple' \
-  must be specified to perform the operation. The \
-  full list of fields that can be matched can be obtained by the command \
-  'xe host-list params=all'. If no parameters to select hosts are given, \
-  the operation will be performed on all hosts."
+let hostselectorsinfo = " Hosts can be specified by filtering the full list of hosts \
+                         on the values of zero or more fields. For example, specifying \
+                         'uuid=<some_uuid>' will select only the host with that uuid, \
+                         and 'enabled=true' will select only hosts whose 'enabled' field \
+                         is equal to 'true'. The special pseudo-field 'host' matches \
+                         any of hostname, name-label or uuid. Where multiple hosts are matching, \
+                         and the operation can be performed on multiple hosts, the option \
+                         '--multiple' must be specified to perform the operation. The \
+                         full list of fields that can be matched can be obtained by the command \
+                         'xe host-list params=all'. If no parameters to select hosts are given, \
+                         the operation will be performed on all hosts."
 
 let srselectors = ["<sr-selectors>"]
-let srselectorsinfo = " The simplest way to select the SR on which the \
-  operation is to be performed is by supplying the argument \
-  'sr=<name or uuid>'. SRs can also be \
-  specified by filtering the full list of hosts on the values of fields. For \
-  example, specifying 'enabled=true' will select all hosts whose \
-  'enabled' field is equal to 'true'. Where multiple SRs are matching, \
-  and the operation can be performed on multiple SRs, the option '--multiple' \
-  must be specified to perform the operation. The \
-  full list of fields that can be matched can be obtained by the command \
-  'xe sr-list params=all'. If no parameters to select SRs are given, \
-  the operation will be performed on all SRs."
+let srselectorsinfo = " SRs can be specified by filtering the full list of SRs \
+                       on the values of zero or more fields. For example, specifying \
+                       'uuid=<some_uuid>' will select only the sr with that uuid, \
+                       and 'enabled=true' will select only srs whose 'enabled' field \
+                       is equal to 'true'. The special pseudo-field 'sr' matches \
+                       either of name-label or uuid. Where multiple SRs are matching, \
+                       and the operation can be performed on multiple SRs, the option '--multiple' \
+                       must be specified to perform the operation. The \
+                       full list of fields that can be matched can be obtained by the command \
+                       'xe sr-list params=all'. If no parameters to select SRs are given, \
+                       the operation will be performed on all SRs."
 
 let rec cmdtable_data : (string*cmd_spec) list =
   [
@@ -142,22 +143,22 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-	"message-destroy",
-	  {
-		  reqd=["uuid"];
-		  optn=[];
-		  help="Destroy an existing message.";
-		  implementation=No_fd Cli_operations.message_destroy;
-		  flags=[];
-	  };
-
-(*    "host-introduce",
+    "message-destroy",
     {
-      reqd=["name"; "address"; "remote-port"; "remote-username"; "remote-password"]; 
-      optn=["description"];
-      help="Introduce a remote host";
-      implementation=No_fd Cli_operations.host_introduce
-    };*)
+      reqd=["uuid"];
+      optn=[];
+      help="Destroy an existing message.";
+      implementation=No_fd Cli_operations.message_destroy;
+      flags=[];
+    };
+
+    (*    "host-introduce",
+          {
+          reqd=["name"; "address"; "remote-port"; "remote-username"; "remote-password"];
+          optn=["description"];
+          help="Introduce a remote host";
+          implementation=No_fd Cli_operations.host_introduce
+          };*)
 
     "pool-enable-binary-storage",
     {
@@ -193,7 +194,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_sync_database;
       flags=[];
     };
-   "pool-join",
+    "pool-join",
     {
       reqd=["master-address"; "master-username"; "master-password"];
       optn=["force"];
@@ -202,7 +203,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "pool-emergency-reset-master",
+    "pool-emergency-reset-master",
     {
       reqd=["master-address"];
       optn=[];
@@ -211,16 +212,16 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Neverforward];
     };
 
-   "pool-emergency-transition-to-master",
+    "pool-emergency-transition-to-master",
     {
       reqd=[];
-      optn=[];
-      help="Instruct slave to become pool master.";
+      optn=["force"];
+      help="Instruct slave to become pool master. The operation will be ignored if this host is already master; the optional parameter '--force' will force the operation.";
       implementation=No_fd_local_session Cli_operations.pool_emergency_transition_to_master;
       flags=[Neverforward];
     };
 
-   "pool-recover-slaves",
+    "pool-recover-slaves",
     {
       reqd=[];
       optn=[];
@@ -229,7 +230,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "pool-eject",
+    "pool-eject",
     {
       reqd=["host-uuid"];
       optn=[];
@@ -238,7 +239,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "pool-dump-database",
+    "pool-dump-database",
     {
       reqd=["file-name"];
       optn=[];
@@ -247,7 +248,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "pool-restore-database",
+    "pool-restore-database",
     {
       reqd=["file-name"];
       optn=["dry-run"];
@@ -256,7 +257,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "pool-enable-external-auth",
+    "pool-enable-external-auth",
     {
       reqd=["auth-type"; "service-name";];
       optn=["uuid"; "config:"];
@@ -265,7 +266,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "pool-disable-external-auth",
+    "pool-disable-external-auth",
     {
       reqd=[];
       optn=["uuid"; "config:"];
@@ -273,7 +274,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_disable_external_auth;
       flags=[];
     };
-    
+
     "pool-initialize-wlb",
     {
       reqd=["wlb_url"; "wlb_username"; "wlb_password"; "xenserver_username"; "xenserver_password"];
@@ -282,7 +283,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_initialize_wlb;
       flags=[];
     };
-    
+
     "pool-deconfigure-wlb",
     {
       reqd=[];
@@ -291,7 +292,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_deconfigure_wlb;
       flags=[];
     };
-    
+
     "pool-send-wlb-configuration",
     {
       reqd=[];
@@ -300,7 +301,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_send_wlb_configuration;
       flags=[];
     };
-    
+
     "pool-retrieve-wlb-configuration",
     {
       reqd=[];
@@ -309,7 +310,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_retrieve_wlb_configuration;
       flags=[];
     };
-    
+
     "pool-retrieve-wlb-recommendations",
     {
       reqd=[];
@@ -327,7 +328,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=With_fd Cli_operations.pool_retrieve_wlb_report;
       flags=[Neverforward];
     };
-    
+
     "pool-retrieve-wlb-diagnostics",
     {
       reqd=[];
@@ -336,7 +337,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=With_fd Cli_operations.pool_retrieve_wlb_diagnostics;
       flags=[Neverforward];
     };
-    
+
     "pool-send-test-post",
     {
       reqd=["dest-host"; "dest-port"; "body"];
@@ -345,7 +346,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_send_test_post;
       flags=[];
     };
-    
+
     "pool-certificate-install",
     {
       reqd=["filename"];
@@ -354,7 +355,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=With_fd Cli_operations.pool_certificate_install;
       flags=[];
     };
-    
+
     "pool-certificate-uninstall",
     {
       reqd=["name"];
@@ -363,7 +364,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_certificate_uninstall;
       flags=[];
     };
-    
+
     "pool-certificate-list",
     {
       reqd=[];
@@ -372,7 +373,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_certificate_list;
       flags=[];
     };
-    
+
     "pool-crl-install",
     {
       reqd=["filename"];
@@ -381,7 +382,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=With_fd Cli_operations.pool_crl_install;
       flags=[];
     };
-    
+
     "pool-crl-uninstall",
     {
       reqd=["name"];
@@ -390,7 +391,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_crl_uninstall;
       flags=[];
     };
-    
+
     "pool-crl-list",
     {
       reqd=[];
@@ -399,7 +400,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_crl_list;
       flags=[];
     };
-    
+
     "pool-certificate-sync",
     {
       reqd=[];
@@ -408,35 +409,35 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.pool_certificate_sync;
       flags=[];
     };
-    
-   "pool-set-vswitch-controller",
-   {
+
+    "pool-set-vswitch-controller",
+    {
       reqd=["address"];
       optn=[];
       help="Set the IP address of the vswitch controller.";
       implementation=No_fd Cli_operations.pool_set_vswitch_controller;
       flags=[Hidden];
-   };
+    };
 
-   "pool-enable-ssl-legacy",
-   {
+    "pool-enable-ssl-legacy",
+    {
       reqd=[];
       optn=["uuid"];
       help="Set ssl-legacy to True on each host.";
       implementation=No_fd Cli_operations.pool_enable_ssl_legacy;
       flags=[];
-   };
+    };
 
-   "pool-disable-ssl-legacy",
-   {
+    "pool-disable-ssl-legacy",
+    {
       reqd=[];
       optn=["uuid"];
       help="Set ssl-legacy to False on each host.";
       implementation=No_fd Cli_operations.pool_disable_ssl_legacy;
       flags=[];
-   };
-   
-   "host-is-in-emergency-mode",
+    };
+
+    "host-is-in-emergency-mode",
     {
       reqd=[];
       optn=[];
@@ -445,7 +446,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Neverforward];
     };
 
-   "host-forget",
+    "host-forget",
     {
       reqd=["uuid"];
       optn=[];
@@ -454,7 +455,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-declare-dead",
+    "host-declare-dead",
     {
       reqd=["uuid"];
       optn=[];
@@ -463,7 +464,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-disable",
+    "host-disable",
     {
       reqd=[];
       optn=[];
@@ -472,7 +473,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-sync-data",
+    "host-sync-data",
     {
       reqd=[];
       optn=[];
@@ -481,7 +482,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-enable",
+    "host-enable",
     {
       reqd=[];
       optn=[];
@@ -490,52 +491,52 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-enable-local-storage-caching",
-	{ 
-		reqd=["sr-uuid"];
-		optn=[];
-		help="Enable local storage caching on the specified host";
-		implementation=No_fd Cli_operations.host_enable_local_storage_caching;
-		flags=[Host_selectors];
-	};
+    "host-enable-local-storage-caching",
+    {
+      reqd=["sr-uuid"];
+      optn=[];
+      help="Enable local storage caching on the specified host";
+      implementation=No_fd Cli_operations.host_enable_local_storage_caching;
+      flags=[Host_selectors];
+    };
 
-   "host-disable-local-storage-caching",
-	{ 
-		reqd=[];
-		optn=[];
-		help="Disable local storage caching on the specified host";
-		implementation=No_fd Cli_operations.host_disable_local_storage_caching;
-		flags=[Host_selectors];
-	};
-	  
-   "pool-enable-local-storage-caching",
-	{
-		reqd=["uuid"];
-		optn=[];
-		help="Enable local storage caching across the pool";
-		implementation=No_fd Cli_operations.pool_enable_local_storage_caching;
-		flags=[];
-	};
+    "host-disable-local-storage-caching",
+    {
+      reqd=[];
+      optn=[];
+      help="Disable local storage caching on the specified host";
+      implementation=No_fd Cli_operations.host_disable_local_storage_caching;
+      flags=[Host_selectors];
+    };
 
-   "pool-disable-local-storage-caching",
-	{
-		reqd=["uuid"];
-		optn=[];
-		help="Disable local storage caching across the pool";
-		implementation=No_fd Cli_operations.pool_disable_local_storage_caching;
-		flags=[];
-	};
+    "pool-enable-local-storage-caching",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Enable local storage caching across the pool";
+      implementation=No_fd Cli_operations.pool_enable_local_storage_caching;
+      flags=[];
+    };
 
-		"pool-apply-edition",
-		{
-			reqd=["edition"];
-			optn=["uuid"; "license-server-address"; "license-server-port"];
-			help="Apply an edition across the pool";
-			implementation=No_fd Cli_operations.pool_apply_edition;
-			flags=[];
-		};
+    "pool-disable-local-storage-caching",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Disable local storage caching across the pool";
+      implementation=No_fd Cli_operations.pool_disable_local_storage_caching;
+      flags=[];
+    };
 
-   "host-shutdown",
+    "pool-apply-edition",
+    {
+      reqd=["edition"];
+      optn=["uuid"; "license-server-address"; "license-server-port"];
+      help="Apply an edition across the pool";
+      implementation=No_fd Cli_operations.pool_apply_edition;
+      flags=[];
+    };
+
+    "host-shutdown",
     {
       reqd=[];
       optn=[];
@@ -544,7 +545,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-reboot",
+    "host-reboot",
     {
       reqd=[];
       optn=[];
@@ -553,7 +554,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-power-on",
+    "host-power-on",
     {
       reqd=[];
       optn=[];
@@ -562,7 +563,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-dmesg",
+    "host-dmesg",
     {
       reqd=[];
       optn=[];
@@ -571,7 +572,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-crashdump-upload",
+    "host-crashdump-upload",
     {
       reqd=["uuid"];
       optn=["url";"http_proxy"];
@@ -580,7 +581,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-crashdump-destroy",
+    "host-crashdump-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -589,7 +590,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-bugreport-upload",
+    "host-bugreport-upload",
     {
       reqd=[];
       optn=["url"; "http_proxy"];
@@ -598,7 +599,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-backup",
+    "host-backup",
     {
       reqd=["file-name"];
       optn=[];
@@ -607,7 +608,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-restore",
+    "host-restore",
     {
       reqd=["file-name"];
       optn=[];
@@ -616,7 +617,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-logs-download",
+    "host-logs-download",
     {
       reqd=[];
       optn=["file-name"];
@@ -625,7 +626,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-signal-networking-change",
+    "host-signal-networking-change",
     {
       reqd=[];
       optn=[];
@@ -634,7 +635,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Neverforward; Hidden];
     };
 
-   "host-send-debug-keys",
+    "host-send-debug-keys",
     {
       reqd=["host-uuid"; "keys"];
       optn=[];
@@ -661,7 +662,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-emergency-management-reconfigure",
+    "host-emergency-management-reconfigure",
     {
       reqd=["interface"];
       optn=[];
@@ -670,7 +671,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[ Neverforward ];
     };
 
-   "host-emergency-ha-disable",
+    "host-emergency-ha-disable",
     {
       reqd=[];
       optn=["force"];
@@ -679,7 +680,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[ Neverforward ];
     };
 
-   "host-management-reconfigure",
+    "host-management-reconfigure",
     {
       reqd=["pif-uuid"];
       optn=[];
@@ -688,7 +689,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-management-disable",
+    "host-management-disable",
     {
       reqd=[];
       optn=[];
@@ -697,25 +698,25 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[ Neverforward ];
     };
 
-	"host-compute-free-memory",
-	{
-		reqd=[];
-		optn=[];
-		help="Computes the amount of free memory on the host.";
-		implementation=No_fd Cli_operations.host_compute_free_memory;
-		flags=[Host_selectors];
-	};
+    "host-compute-free-memory",
+    {
+      reqd=[];
+      optn=[];
+      help="Computes the amount of free memory on the host.";
+      implementation=No_fd Cli_operations.host_compute_free_memory;
+      flags=[Host_selectors];
+    };
 
-	"host-compute-memory-overhead",
-	{
-		reqd=[];
-		optn=[];
-		help="Computes the virtualization memory overhead of a host.";
-		implementation=No_fd Cli_operations.host_compute_memory_overhead;
-		flags=[Host_selectors];
-	};
+    "host-compute-memory-overhead",
+    {
+      reqd=[];
+      optn=[];
+      help="Computes the virtualization memory overhead of a host.";
+      implementation=No_fd Cli_operations.host_compute_memory_overhead;
+      flags=[Host_selectors];
+    };
 
-   "host-get-system-status-capabilities",
+    "host-get-system-status-capabilities",
     {
       reqd=[];
       optn=[];
@@ -724,7 +725,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Neverforward; Host_selectors];
     };
 
-   "host-get-system-status",
+    "host-get-system-status",
     {
       reqd=["filename"];
       optn=["entries"; "output"];
@@ -733,7 +734,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-set-hostname-live",
+    "host-set-hostname-live",
     {
       reqd=["host-uuid"; "host-name"];
       optn=[];
@@ -741,8 +742,8 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.host_set_hostname_live;
       flags=[Host_selectors];
     };
-    
-     "host-set-power-on-mode",
+
+    "host-set-power-on-mode",
     {
       reqd=["power-on-mode"];
       optn=["power-on-config"];
@@ -751,7 +752,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Host_selectors];
     };
 
-   "host-call-plugin",
+    "host-call-plugin",
     {
       reqd=["host-uuid"; "plugin"; "fn"];
       optn=["args:"];
@@ -759,7 +760,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       implementation=No_fd Cli_operations.host_call_plugin;
       flags=[];
     };
-    
+
     "host-retrieve-wlb-evacuate-recommendations",
     {
       reqd=["uuid"];
@@ -769,7 +770,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Hidden];
     };
 
-   "host-enable-external-auth",
+    "host-enable-external-auth",
     {
       reqd=["host-uuid"; "auth-type"; "service-name"];
       optn=["config:"];
@@ -778,7 +779,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Hidden];
     };
 
-   "host-disable-external-auth",
+    "host-disable-external-auth",
     {
       reqd=["host-uuid"];
       optn=["config:"];
@@ -787,7 +788,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Hidden];
     };
 
-   "host-refresh-pack-info",
+    "host-refresh-pack-info",
     {
       reqd=["host-uuid"];
       optn=[];
@@ -796,7 +797,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Hidden];
     };
 
-   "host-cpu-info",
+    "host-cpu-info",
     {
       reqd=[];
       optn=["uuid"];
@@ -805,7 +806,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-get-cpu-features",
+    "host-get-cpu-features",
     {
       reqd=[];
       optn=["uuid"];
@@ -814,7 +815,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-enable-display",
+    "host-enable-display",
     {
       reqd=["uuid"];
       optn=[];
@@ -823,7 +824,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "host-disable-display",
+    "host-disable-display",
     {
       reqd=["uuid"];
       optn=[];
@@ -832,7 +833,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "patch-upload",
+    "patch-upload",
     {
       reqd=["file-name"];
       optn=[];
@@ -841,7 +842,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "patch-destroy",
+    "patch-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -850,16 +851,16 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "update-upload",
+    "update-upload",
     {
-      reqd=["file-name"; "host-uuid"];
-      optn=[];
+      reqd=["file-name"];
+      optn=["sr-uuid"];
       help="Stream new update to the server.";
       implementation=With_fd Cli_operations.update_upload;
       flags=[];
-    };    
+    };
 
-   "patch-precheck",
+    "patch-precheck",
     {
       reqd=["uuid"; "host-uuid"];
       optn=[];
@@ -868,7 +869,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "patch-apply",
+    "patch-apply",
     {
       reqd=["uuid"; "host-uuid"];
       optn=[];
@@ -877,7 +878,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "patch-pool-apply",
+    "patch-pool-apply",
     {
       reqd=["uuid"];
       optn=[];
@@ -886,7 +887,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-   "patch-clean",
+    "patch-clean",
     {
       reqd=["uuid"];
       optn=[];
@@ -895,16 +896,79 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-	"patch-pool-clean",
-	{
-		reqd=["uuid"];
-		optn=[];
-		help="Delete a previously uploaded patch file on all hosts in the pool.";
-		implementation=No_fd Cli_operations.patch_pool_clean;
-		flags=[];
-	};
+    "patch-pool-clean",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Delete a previously uploaded patch file on all hosts in the pool.";
+      implementation=No_fd Cli_operations.patch_pool_clean;
+      flags=[];
+    };
 
-   "user-password-change",
+    "update-introduce",
+    {
+      reqd=["vdi-uuid"];
+      optn=[];
+      help="Introduce update VDI.";
+      implementation=No_fd Cli_operations.update_introduce;
+      flags=[];
+    };
+
+    "update-precheck",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Execute the precheck stage of the selected update on the specified host.";
+      implementation=No_fd Cli_operations.update_precheck;
+      flags=[Host_selectors];
+    };
+
+    "update-apply",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Apply the selected update to the specified host.";
+      implementation=No_fd Cli_operations.update_apply;
+      flags=[Host_selectors];
+    };
+
+    "update-pool-apply",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Apply the selected update to all hosts in the pool.";
+      implementation=No_fd Cli_operations.update_pool_apply;
+      flags=[];
+    };
+
+    "update-pool-clean",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Removes the update's files from all hosts in the pool.";
+      implementation=No_fd Cli_operations.update_pool_clean;
+      flags=[];
+    };
+
+    "update-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Removes the database entry. Only works on unapplied update.";
+      implementation=No_fd Cli_operations.update_destroy;
+      flags=[];
+    };
+
+    "update-resync-host",
+    {
+      reqd=["host-uuid"];
+      optn=[];
+      help="Refreshes Host.updates";
+      implementation=No_fd Cli_operations.update_resync_host;
+      flags=[Hidden];
+    };
+
+    "user-password-change",
     {
       reqd=["new"];
       optn=["old"];
@@ -913,115 +977,124 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[];
     };
 
-	"vm-compute-memory-overhead",
-	{
-		reqd=[];
-		optn=[];
-		help="Computes the virtualization memory overhead of a VM.";
-		implementation=No_fd Cli_operations.vm_compute_memory_overhead;
-		flags=[Vm_selectors];
-	};
-
-	"vm-memory-balloon",
-	{
-		reqd=["target"];
-		optn=[];
-		help="Set the memory target for a running VM. The given value must be within the "^
-		     "range defined by the VM's memory_dynamic_min and memory_dynamic_max values.";
-		implementation=No_fd Cli_operations.vm_memory_target_set;
-		flags=[Deprecated ["vm-memory-dynamic-range-set"]; Vm_selectors; Hidden];
-	};
-
-	"vm-memory-dynamic-range-set",
-	{
-		reqd=["min"; "max"];
-		optn=[];
-		help="Configure the dynamic memory range of a VM. The dynamic memory \
-		range defines soft lower and upper limits for a VM's memory. It's \
-		possible to change these fields when a VM is running or halted. The \
-		dynamic range must fit within the static range.";
-		implementation=No_fd Cli_operations.vm_memory_dynamic_range_set;
-		flags=[Vm_selectors];
-	};
-
-	"vm-memory-static-range-set",
-	{
-		reqd=["min"; "max"];
-		optn=[];
-		help="Configure the static memory range of a VM. The static memory \
-		range defines hard lower and upper limits for a VM's memory. It's \
-		possible to change these fields only when a VM is halted. The static \
-		range must encompass the dynamic range.";
-		implementation=No_fd Cli_operations.vm_memory_static_range_set;
-		flags=[Vm_selectors];
-	};
-
-	"vm-memory-limits-set",
-	{
-		reqd=["static-min"; "static-max"; "dynamic-min"; "dynamic-max"];
-		optn=[];
-		help="Configure the memory limits of a VM.";
-		implementation=No_fd Cli_operations.vm_memory_limits_set;
-		flags=[Vm_selectors];
-	};
-
-	"vm-memory-target-set",
-	{
-		reqd=["target"];
-		optn=[];
-		help="Set the memory target for a halted or running VM. The given \
-		value must be within the range defined by the VM's memory_static_min \
-		and memory_static_max values.";
-		implementation=No_fd Cli_operations.vm_memory_target_set;
-		flags=[Vm_selectors];
-	};
-
-	"vm-memory-target-wait",
-	{
-		reqd=[]; 
-		optn=[];
-		help="Wait for a running VM to reach its current memory target.";
-		implementation=No_fd Cli_operations.vm_memory_target_wait;
-		flags=[Vm_selectors; Hidden];
-	};
-
-   "vm-data-source-list",
-   {
-     reqd=[]; 
-     optn=[];
-     help="List the data sources that can be recorded for a VM.";
-     implementation=No_fd Cli_operations.vm_data_source_list;
-     flags=[Vm_selectors];
-   };
-
-   "vm-data-source-record",
-   {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Record the specified data source for a VM.";
-     implementation=No_fd Cli_operations.vm_data_source_record;
-     flags=[Vm_selectors];
-   };
-
-   "vm-data-source-query",
+    "vm-compute-memory-overhead",
     {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Query the last value read from a VM data source.";
-     implementation=No_fd Cli_operations.vm_data_source_query;
-     flags=[Vm_selectors];
-   };
+      reqd=[];
+      optn=[];
+      help="Computes the virtualization memory overhead of a VM.";
+      implementation=No_fd Cli_operations.vm_compute_memory_overhead;
+      flags=[Vm_selectors];
+    };
 
-   "vm-data-source-forget",
+    "vm-memory-balloon",
     {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Stop recording the specified data source for a VM, and forget all of the recorded data.";
-     implementation=No_fd Cli_operations.vm_data_source_forget;
-     flags=[Vm_selectors];
-   };
+      reqd=["target"];
+      optn=[];
+      help="Set the memory target for a running VM. The given value must be within the "^
+           "range defined by the VM's memory_dynamic_min and memory_dynamic_max values.";
+      implementation=No_fd Cli_operations.vm_memory_target_set;
+      flags=[Deprecated ["vm-memory-dynamic-range-set"]; Vm_selectors; Hidden];
+    };
 
-   "vm-memory-shadow-multiplier-set",
+    "vm-memory-dynamic-range-set",
+    {
+      reqd=["min"; "max"];
+      optn=[];
+      help="Configure the dynamic memory range of a VM. The dynamic memory \
+            		range defines soft lower and upper limits for a VM's memory. It's \
+            		possible to change these fields when a VM is running or halted. The \
+            		dynamic range must fit within the static range.";
+      implementation=No_fd Cli_operations.vm_memory_dynamic_range_set;
+      flags=[Vm_selectors];
+    };
+
+    "vm-memory-static-range-set",
+    {
+      reqd=["min"; "max"];
+      optn=[];
+      help="Configure the static memory range of a VM. The static memory \
+            		range defines hard lower and upper limits for a VM's memory. It's \
+            		possible to change these fields only when a VM is halted. The static \
+            		range must encompass the dynamic range.";
+      implementation=No_fd Cli_operations.vm_memory_static_range_set;
+      flags=[Vm_selectors];
+    };
+
+    "vm-memory-limits-set",
+    {
+      reqd=["static-min"; "static-max"; "dynamic-min"; "dynamic-max"];
+      optn=[];
+      help="Configure the memory limits of a VM.";
+      implementation=No_fd Cli_operations.vm_memory_limits_set;
+      flags=[Vm_selectors];
+    };
+
+    "vm-memory-set",
+    {
+      reqd=["memory"];
+      optn=[];
+      help="Configure the memory allocation of a VM.";
+      implementation=No_fd Cli_operations.vm_memory_set;
+      flags=[Vm_selectors];
+    };
+
+    "vm-memory-target-set",
+    {
+      reqd=["target"];
+      optn=[];
+      help="Set the memory target for a halted or running VM. The given \
+            		value must be within the range defined by the VM's memory_static_min \
+            		and memory_static_max values.";
+      implementation=No_fd Cli_operations.vm_memory_target_set;
+      flags=[Vm_selectors];
+    };
+
+    "vm-memory-target-wait",
+    {
+      reqd=[];
+      optn=[];
+      help="Wait for a running VM to reach its current memory target.";
+      implementation=No_fd Cli_operations.vm_memory_target_wait;
+      flags=[Vm_selectors; Hidden];
+    };
+
+    "vm-data-source-list",
+    {
+      reqd=[];
+      optn=[];
+      help="List the data sources that can be recorded for a VM.";
+      implementation=No_fd Cli_operations.vm_data_source_list;
+      flags=[Vm_selectors];
+    };
+
+    "vm-data-source-record",
+    {
+      reqd=["data-source"];
+      optn=[];
+      help="Record the specified data source for a VM.";
+      implementation=No_fd Cli_operations.vm_data_source_record;
+      flags=[Vm_selectors];
+    };
+
+    "vm-data-source-query",
+    {
+      reqd=["data-source"];
+      optn=[];
+      help="Query the last value read from a VM data source.";
+      implementation=No_fd Cli_operations.vm_data_source_query;
+      flags=[Vm_selectors];
+    };
+
+    "vm-data-source-forget",
+    {
+      reqd=["data-source"];
+      optn=[];
+      help="Stop recording the specified data source for a VM, and forget all of the recorded data.";
+      implementation=No_fd Cli_operations.vm_data_source_forget;
+      flags=[Vm_selectors];
+    };
+
+    "vm-memory-shadow-multiplier-set",
     {
       reqd=["multiplier"];
       optn=[];
@@ -1030,14 +1103,14 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Vm_selectors];
     };
 
-   "vm-clone",
-   {
-     reqd=["new-name-label"]; 
-     optn=["new-name-description"];
-     help="Clone an existing VM, using storage-level fast disk clone operation where available.";
-     implementation=No_fd Cli_operations.vm_clone;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-clone",
+    {
+      reqd=["new-name-label"];
+      optn=["new-name-description"];
+      help="Clone an existing VM, using storage-level fast disk clone operation where available.";
+      implementation=No_fd Cli_operations.vm_clone;
+      flags=[Standard; Vm_selectors];
+    };
 
     "vm-snapshot",
     {
@@ -1057,7 +1130,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Standard; Vm_selectors];
     };
 
-  "vm-checkpoint",
+    "vm-checkpoint",
     {
       reqd=["new-name-label"];
       optn=["new-name-description"];
@@ -1066,125 +1139,125 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Standard; Vm_selectors];
     };
 
-   "vm-copy",
-   {
-     reqd=["new-name-label"]; 
-     optn=["new-name-description"; "sr-uuid"];
-     help="Copy an existing VM, but without using storage-level fast disk clone operation (even if this is available). The disk images of the copied VM are guaranteed to be 'full images' - i.e. not part of a CoW chain.";
-     implementation=No_fd Cli_operations.vm_copy;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-copy",
+    {
+      reqd=["new-name-label"];
+      optn=["new-name-description"; "sr-uuid"];
+      help="Copy an existing VM, but without using storage-level fast disk clone operation (even if this is available). The disk images of the copied VM are guaranteed to be 'full images' - i.e. not part of a CoW chain.";
+      implementation=No_fd Cli_operations.vm_copy;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "snapshot-revert", 
-   {
+    "snapshot-revert",
+    {
       reqd=[];
       optn=["uuid"; "snapshot-uuid"];
       help="Revert an existing VM to a previous checkpointed or snapshotted state.";
       implementation=No_fd Cli_operations.snapshot_revert;
       flags=[Standard];
-   };
+    };
 
 
-   "vm-install",
-   {
-     reqd=["new-name-label"];
-     optn=["sr-name-label";"sr-uuid";"template";"copy-bios-strings-from"];
-     help="Install a new VM from a template. The template parameter can match either the template name or the uuid.";
-     implementation=No_fd Cli_operations.vm_install;
-     flags=[Standard];
-   };
+    "vm-install",
+    {
+      reqd=["new-name-label"];
+      optn=["sr-name-label";"sr-uuid";"template";"copy-bios-strings-from"];
+      help="Install a new VM from a template. The template parameter can match either the template name or the uuid.";
+      implementation=No_fd Cli_operations.vm_install;
+      flags=[Standard];
+    };
 
-   "vm-uninstall",
-   {
-     reqd=[]; 
-     optn=["force"];
-     help="Uninstall a VM. This operation will destroy those VDIs that are marked RW and connected to this VM only. To simply destroy the VM record, use vm-destroy.";
-     implementation=With_fd Cli_operations.vm_uninstall;
-     flags=[Standard;Vm_selectors];
-   };
+    "vm-uninstall",
+    {
+      reqd=[];
+      optn=["force"];
+      help="Uninstall a VM. This operation will destroy those VDIs that are marked RW and connected to this VM only. To simply destroy the VM record, use vm-destroy.";
+      implementation=With_fd Cli_operations.vm_uninstall;
+      flags=[Standard;Vm_selectors];
+    };
 
-   "console",
-   {
-     reqd=[];
-     optn=[];
-     help="Attach to a particular console.";
-     implementation=With_fd Cli_operations.console;
-     flags=[Vm_selectors];
-   };
+    "console",
+    {
+      reqd=[];
+      optn=[];
+      help="Attach to a particular console.";
+      implementation=With_fd Cli_operations.console;
+      flags=[Vm_selectors];
+    };
 
-   "vm-query-services",
-	  {
-		  reqd=[];
-		  optn=[];
-		  help="Query the system services offered by the given VM(s).";
-		  implementation=No_fd Cli_operations.vm_query_services;
-		  flags=[Standard;Vm_selectors;Hidden];
-	  };
+    "vm-query-services",
+    {
+      reqd=[];
+      optn=[];
+      help="Query the system services offered by the given VM(s).";
+      implementation=No_fd Cli_operations.vm_query_services;
+      flags=[Standard;Vm_selectors;Hidden];
+    };
 
-   "vm-start",
-   {
-     reqd=[];
-     optn=["force"; "on"; "paused"];
-     help="Start the selected VM(s). Where pooling is enabled, the host on which to start can be specified with the 'on' parameter that takes a uuid. The optional parameter '--force' will bypass any hardware-compatibility warnings.";
-     implementation=No_fd Cli_operations.vm_start;
-     flags=[Standard;Vm_selectors];
-   };
+    "vm-start",
+    {
+      reqd=[];
+      optn=["force"; "on"; "paused"];
+      help="Start the selected VM(s). Where pooling is enabled, the host on which to start can be specified with the 'on' parameter that takes a uuid. The optional parameter '--force' will bypass any hardware-compatibility warnings.";
+      implementation=No_fd Cli_operations.vm_start;
+      flags=[Standard;Vm_selectors];
+    };
 
-   "vm-suspend",
-   {
-     reqd=[];
-     optn=[];
-     help="Suspend the selected VM(s).";
-     implementation=No_fd Cli_operations.vm_suspend;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-suspend",
+    {
+      reqd=[];
+      optn=[];
+      help="Suspend the selected VM(s).";
+      implementation=No_fd Cli_operations.vm_suspend;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-resume",
-   {
-     reqd=[];
-     optn=["force"; "on"];
-     help="Resume the selected VM(s).";
-     implementation=No_fd Cli_operations.vm_resume;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-resume",
+    {
+      reqd=[];
+      optn=["force"; "on"];
+      help="Resume the selected VM(s).";
+      implementation=No_fd Cli_operations.vm_resume;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-shutdown",
-   {
-     reqd=[]; 
-     optn=["force"];
-     help="Shutdown the selected VM(s). The optional argument --force will forcibly shut down the VM.";
-     implementation=No_fd Cli_operations.vm_shutdown;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-shutdown",
+    {
+      reqd=[];
+      optn=["force"];
+      help="Shutdown the selected VM(s). The optional argument --force will forcibly shut down the VM.";
+      implementation=No_fd Cli_operations.vm_shutdown;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-reset-powerstate",
-   {
-     reqd=[]; 
-     optn=["force"];
-     help="Force the VM powerstate to halted in the management toolstack database only. This command is used to recover a VM that is marked as 'running', but is known to be on a dead slave host that will not recover. This is a potentially dangerous operation: you must ensure that the VM you are forcing to 'halted' is definitely not running anywhere.";
-     implementation=No_fd Cli_operations.vm_reset_powerstate;
-     flags=[Standard; Vm_selectors];
-   };
-   
-   "snapshot-reset-powerstate",
-   {
-     reqd=[]; 
-     optn=["uuid"; "snapshot-uuid"; "force"];
-     help="Force the VM powerstate to halted in the management toolstack database only. This command is used to recover a snapshot that is marked as 'suspended'. This is a potentially dangerous operation: you must ensure that you do not need the memory image anymore (ie. you will not be able to resume your snapshot anymore).";
-     implementation=No_fd Cli_operations.snapshot_reset_powerstate;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-reset-powerstate",
+    {
+      reqd=[];
+      optn=["force"];
+      help="Force the VM powerstate to halted in the management toolstack database only. This command is used to recover a VM that is marked as 'running', but is known to be on a dead slave host that will not recover. This is a potentially dangerous operation: you must ensure that the VM you are forcing to 'halted' is definitely not running anywhere.";
+      implementation=No_fd Cli_operations.vm_reset_powerstate;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-reboot",
-   {
-     reqd=[]; 
-     optn=["force"];
-     help="Reboot the selected VM(s).";
-     implementation=No_fd Cli_operations.vm_reboot;
-     flags=[Standard; Vm_selectors];
-   };
+    "snapshot-reset-powerstate",
+    {
+      reqd=[];
+      optn=["uuid"; "snapshot-uuid"; "force"];
+      help="Force the VM powerstate to halted in the management toolstack database only. This command is used to recover a snapshot that is marked as 'suspended'. This is a potentially dangerous operation: you must ensure that you do not need the memory image anymore (ie. you will not be able to resume your snapshot anymore).";
+      implementation=No_fd Cli_operations.snapshot_reset_powerstate;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-compute-maximum-memory",
+    "vm-reboot",
+    {
+      reqd=[];
+      optn=["force"];
+      help="Reboot the selected VM(s).";
+      implementation=No_fd Cli_operations.vm_reboot;
+      flags=[Standard; Vm_selectors];
+    };
+
+    "vm-compute-maximum-memory",
     {
       reqd=["total"];
       optn=["approximate"];
@@ -1202,7 +1275,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Vm_selectors];
     };
 
-   "vm-migrate",
+    "vm-migrate",
     {
       reqd=[];
       optn=["live"; "host"; "host-uuid"; "remote-master"; "remote-username"; "remote-password"; "remote-network"; "force"; "copy"; "vif:"; "vdi:"];
@@ -1211,7 +1284,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Standard; Vm_selectors];
     };
 
-   "vm-pause",
+    "vm-pause",
     {
       reqd=[];
       optn=[];
@@ -1220,7 +1293,7 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Standard; Vm_selectors];
     };
 
-   "vm-unpause",
+    "vm-unpause",
     {
       reqd=[];
       optn=[];
@@ -1229,72 +1302,72 @@ let rec cmdtable_data : (string*cmd_spec) list =
       flags=[Standard; Vm_selectors];
     };
 
-   "vm-disk-list",
-   {
-     reqd=[]; 
-     optn=["vbd-params";"vdi-params"];
-     help="List the disks on the selected VM(s).";
-     implementation=No_fd (Cli_operations.vm_disk_list false);
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-disk-list",
+    {
+      reqd=[];
+      optn=["vbd-params";"vdi-params"];
+      help="List the disks on the selected VM(s).";
+      implementation=No_fd (Cli_operations.vm_disk_list false);
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-crashdump-list",
-   {
-     reqd=[];
-     optn=[];
-     help="List crashdumps associated with the selected VM(s).";
-     implementation=No_fd Cli_operations.vm_crashdump_list;
-     flags=[Vm_selectors];
-   };
+    "vm-crashdump-list",
+    {
+      reqd=[];
+      optn=[];
+      help="List crashdumps associated with the selected VM(s).";
+      implementation=No_fd Cli_operations.vm_crashdump_list;
+      flags=[Vm_selectors];
+    };
 
-   "vm-cd-add",
-   {
-     reqd=["cd-name";"device"];
-     optn=[];
-     help="Add a CD to the VM(s). The device field should be selected from the parameter 'allowed-VBD-devices' of the VM.";
-     implementation=No_fd Cli_operations.vm_cd_add;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-cd-add",
+    {
+      reqd=["cd-name";"device"];
+      optn=[];
+      help="Add a CD to the VM(s). The device field should be selected from the parameter 'allowed-VBD-devices' of the VM.";
+      implementation=No_fd Cli_operations.vm_cd_add;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-cd-list",
-   {
-     reqd=[];
-     optn=["vbd-params";"vdi-params"];
-     help="List the CDs currently attached to the VM(s).";
-     implementation=No_fd (Cli_operations.vm_disk_list true);
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-cd-list",
+    {
+      reqd=[];
+      optn=["vbd-params";"vdi-params"];
+      help="List the CDs currently attached to the VM(s).";
+      implementation=No_fd (Cli_operations.vm_disk_list true);
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-cd-remove",
-   {
-     optn=[];
-     reqd=["cd-name"];
-     help="Remove the selected CDs from the VM(s).";
-     implementation=No_fd Cli_operations.vm_cd_remove;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-cd-remove",
+    {
+      optn=[];
+      reqd=["cd-name"];
+      help="Remove the selected CDs from the VM(s).";
+      implementation=No_fd Cli_operations.vm_cd_remove;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-cd-eject",
+    "vm-cd-eject",
     {
       optn=[];
       reqd=[];
       help="Eject a CD from the virtual CD drive. This command will only work if there is one and only one CD attached to the VM. When there are two \
-or more CDs, please use the command 'vbd-eject' and specify the uuid of the VBD.";
+            or more CDs, please use the command 'vbd-eject' and specify the uuid of the VBD.";
       implementation=No_fd Cli_operations.vm_cd_eject;
       flags=[Standard; Vm_selectors];
     };
-   
-   "vm-cd-insert",
+
+    "vm-cd-insert",
     {
       optn=[];
       reqd=["cd-name"];
       help="Insert a CD into the virtual CD drive. This command will only work if there is one and only one empty CD device attached to the VM. When \
-there are two or more empty CD devices, please use the command 'vbd-insert' and specify the uuids of the VBD and of the VDI to insert.";
+            there are two or more empty CD devices, please use the command 'vbd-insert' and specify the uuids of the VBD and of the VDI to insert.";
       implementation=No_fd Cli_operations.vm_cd_insert;
       flags=[Standard; Vm_selectors];
     };
 
-   "vm-vcpu-hotplug",
+    "vm-vcpu-hotplug",
     {
       reqd=["new-vcpus"];
       optn=[];
@@ -1303,7 +1376,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Vm_selectors];
     };
 
-   "cd-list",
+    "cd-list",
     {
       reqd=[];
       optn=["params"];
@@ -1312,34 +1385,34 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Standard];
     };
 
-   "vm-disk-add",
-   {
-     reqd=["disk-size";"device"];
-     optn=["sr-uuid"];
-     help="Add a new disk to the selected VM(s). The device field should be selected from the field 'allowed-VBD-devices' of the VM.";
-     implementation=No_fd Cli_operations.vm_disk_add;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-disk-add",
+    {
+      reqd=["disk-size";"device"];
+      optn=["sr-uuid"];
+      help="Add a new disk to the selected VM(s). The device field should be selected from the field 'allowed-VBD-devices' of the VM.";
+      implementation=No_fd Cli_operations.vm_disk_add;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-disk-remove",
-   {
-     reqd=["device"];
-     optn=[];
-     help="Remove a disk from the selected VM and destroy it.";
-     implementation=No_fd Cli_operations.vm_disk_remove;
-     flags=[Standard; Vm_selectors];
-   };
+    "vm-disk-remove",
+    {
+      reqd=["device"];
+      optn=[];
+      help="Remove a disk from the selected VM and destroy it.";
+      implementation=No_fd Cli_operations.vm_disk_remove;
+      flags=[Standard; Vm_selectors];
+    };
 
-   "vm-import",
-   {
-			reqd=[];
-			optn=["filename"; "preserve"; "sr-uuid"; "force"; "host-username"; "host-password"; "type"; "remote-config"; "url"; "vdi:"];
-			help="Import a VM. If type=ESXServer is given, it will import from a VMWare server and 'host-username', 'host-password' and 'remote-config' are required. Otherwise, it will import from a file, and 'filename' is required. If the option preserve=true is given then as many settings as possible are restored, including VIF MAC addresses. The default is to regenerate VIF MAC addresses. The VDIs will be imported into the Pool's default SR unless an override is provided. If the force option is given then any disk data checksum failures will be ignored. If the parameter 'url' is specified, xapi will attempt to import from that URL.";
-     implementation=With_fd Cli_operations.vm_import;
-     flags=[Standard];
-   };
+    "vm-import",
+    {
+      reqd=[];
+      optn=["filename"; "preserve"; "sr-uuid"; "force"; "host-username"; "host-password"; "type"; "remote-config"; "url"; "vdi:"];
+      help="Import a VM. If type=ESXServer is given, it will import from a VMWare server and 'host-username', 'host-password' and 'remote-config' are required. Otherwise, it will import from a file, and 'filename' is required. If the option preserve=true is given then as many settings as possible are restored, including VIF MAC addresses. The default is to regenerate VIF MAC addresses. The VDIs will be imported into the Pool's default SR unless an override is provided. If the force option is given then any disk data checksum failures will be ignored. If the parameter 'url' is specified, xapi will attempt to import from that URL.";
+      implementation=With_fd Cli_operations.vm_import;
+      flags=[Standard];
+    };
 
-   "vm-export",
+    "vm-export",
     {
       reqd=["filename"];
       optn=["preserve-power-state"; "compress"];
@@ -1348,7 +1421,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Standard; Vm_selectors];
     };
 
-   "vm-copy-bios-strings",
+    "vm-copy-bios-strings",
     {
       reqd=["host-uuid"];
       optn=[];
@@ -1357,7 +1430,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Vm_selectors];
     };
 
-   "vm-is-bios-customized",
+    "vm-is-bios-customized",
     {
       reqd=[];
       optn=[];
@@ -1366,7 +1439,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Vm_selectors];
     };
 
-   "vm-call-plugin",
+    "vm-call-plugin",
     {
       reqd=["vm-uuid"; "plugin"; "fn"];
       optn=["args:"];
@@ -1375,7 +1448,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "snapshot-export-to-template",
+    "snapshot-export-to-template",
     {
       reqd=["filename"; "snapshot-uuid"];
       optn=["preserve-power-state"];
@@ -1384,7 +1457,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Standard];
     };
 
-   "snapshot-clone",
+    "snapshot-clone",
     {
       reqd=["new-name-label"];
       optn=["uuid"; "new-name-description"];
@@ -1393,7 +1466,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Standard];
     };
 
-   "snapshot-copy",
+    "snapshot-copy",
     {
       reqd=["new-name-label"];
       optn=["uuid"; "new-name-description"; "sr-uuid"];
@@ -1402,16 +1475,16 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Standard];
     };
 
-   "snapshot-uninstall",
-   {
-     reqd=[];
-     optn=["uuid"; "snapshot-uuid"; "force"];
-     help="Uninstall a snapshot. This operation will destroy those VDIs that are marked RW and connected to this snapshot only. To simply destroy the VM record, use snapshot-destroy.";
-     implementation=With_fd Cli_operations.snapshot_uninstall;
-     flags=[Standard];
-   };
+    "snapshot-uninstall",
+    {
+      reqd=[];
+      optn=["uuid"; "snapshot-uuid"; "force"];
+      help="Uninstall a snapshot. This operation will destroy those VDIs that are marked RW and connected to this snapshot only. To simply destroy the VM record, use snapshot-destroy.";
+      implementation=With_fd Cli_operations.snapshot_uninstall;
+      flags=[Standard];
+    };
 
-   "snapshot-destroy",
+    "snapshot-destroy",
     {
       reqd=[];
       optn=["uuid"; "snapshot-uuid"];
@@ -1420,16 +1493,16 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "snapshot-disk-list",
-   {
-     reqd=[]; 
-     optn=["uuid"; "snapshot-uuid"; "vbd-params"; "vdi-params"];
-     help="List the disks on the selected VM(s).";
-     implementation=No_fd (Cli_operations.snapshot_disk_list false);
-     flags=[Standard; Vm_selectors];
-   };
+    "snapshot-disk-list",
+    {
+      reqd=[];
+      optn=["uuid"; "snapshot-uuid"; "vbd-params"; "vdi-params"];
+      help="List the disks on the selected VM(s).";
+      implementation=No_fd (Cli_operations.snapshot_disk_list false);
+      flags=[Standard; Vm_selectors];
+    };
 
-   "template-export",
+    "template-export",
     {
       reqd=["filename"; "template-uuid"];
       optn=[];
@@ -1438,16 +1511,16 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Standard];
     };
 
-   "template-uninstall",
-   {
-     reqd=["template-uuid"]; 
-     optn=["force"];
-     help="Uninstall a custom template. This operation will destroy those VDIs that are marked as 'owned' by this template";
-     implementation=With_fd Cli_operations.template_uninstall;
+    "template-uninstall",
+    {
+      reqd=["template-uuid"];
+      optn=["force"];
+      help="Uninstall a custom template. This operation will destroy those VDIs that are marked as 'owned' by this template";
+      implementation=With_fd Cli_operations.template_uninstall;
       flags=[Standard];
-   };
+    };
 
-   "vm-vif-list",
+    "vm-vif-list",
     {
       reqd=[];
       optn=[];
@@ -1456,16 +1529,16 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Standard; Vm_selectors];
     };
 
-   "vlan-create",
-   {
-     reqd=["pif-uuid"; "vlan"; "network-uuid"];
-     optn=[];
-     help="Create a new VLAN on a host.";
-     implementation=No_fd Cli_operations.vlan_create;
+    "vlan-create",
+    {
+      reqd=["pif-uuid"; "vlan"; "network-uuid"];
+      optn=[];
+      help="Create a new VLAN on a host.";
+      implementation=No_fd Cli_operations.vlan_create;
       flags=[];
-   };
+    };
 
-   "vlan-destroy",
+    "vlan-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1473,17 +1546,17 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vlan_destroy;
       flags=[];
     };
-    
-   "tunnel-create",
-   {
-     reqd=["pif-uuid"; "network-uuid"];
-     optn=[];
-     help="Create a new tunnel on a host.";
-     implementation=No_fd Cli_operations.tunnel_create;
-     flags=[];
-   };
 
-   "tunnel-destroy",
+    "tunnel-create",
+    {
+      reqd=["pif-uuid"; "network-uuid"];
+      optn=[];
+      help="Create a new tunnel on a host.";
+      implementation=No_fd Cli_operations.tunnel_create;
+      flags=[];
+    };
+
+    "tunnel-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1492,7 +1565,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "pif-unplug",
+    "pif-unplug",
     {
       reqd=["uuid"];
       optn=[];
@@ -1501,7 +1574,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[]
     };
 
-   "pif-plug",
+    "pif-plug",
     {
       reqd=["uuid"];
       optn=[];
@@ -1510,7 +1583,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[]
     };
 
-   "pif-reconfigure-ip",
+    "pif-reconfigure-ip",
     {
       reqd=["uuid"; "mode"];
       optn=["IP"; "netmask"; "gateway"; "DNS"];
@@ -1519,7 +1592,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "pif-reconfigure-ipv6",
+    "pif-reconfigure-ipv6",
     {
       reqd=["uuid"; "mode"];
       optn=["IPv6"; "gateway"; "DNS"];
@@ -1528,7 +1601,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "pif-set-primary-address-type",
+    "pif-set-primary-address-type",
     {
       reqd=["uuid"; "primary_address_type"];
       optn=[];
@@ -1537,8 +1610,8 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "pif-scan",
-    { 
+    "pif-scan",
+    {
       reqd=["host-uuid"];
       optn=[];
       help="Scan for new physical interfaces on a host.";
@@ -1546,8 +1619,8 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "pif-introduce",
-    { 
+    "pif-introduce",
+    {
       reqd=["host-uuid"; "device"];
       optn=["mac"; "managed"];
       help="Create a new PIF object representing a physical interface on a host.";
@@ -1555,7 +1628,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "pif-forget",
+    "pif-forget",
     {
       reqd=["uuid"];
       optn=[];
@@ -1564,7 +1637,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "pif-db-forget",
+    "pif-db-forget",
     {
       reqd=["uuid"];
       optn=[];
@@ -1573,7 +1646,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[Hidden];
     };
 
-   "bond-create",
+    "bond-create",
     {
       reqd=["network-uuid"; "pif-uuids"];
       optn=["mac"; "mode"; "properties:"];
@@ -1582,7 +1655,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "bond-destroy",
+    "bond-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1591,7 +1664,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-   "bond-set-mode",
+    "bond-set-mode",
     {
       reqd=["uuid"; "mode"];
       optn=[];
@@ -1600,9 +1673,9 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       flags=[];
     };
 
-(* Lowlevel non-autogenerated stuff *)
+    (* Lowlevel non-autogenerated stuff *)
 
-   "vbd-create",
+    "vbd-create",
     {
       reqd=["vm-uuid";"device"];
       optn=["vdi-uuid"; "bootable"; "type"; "mode"; "unpluggable" ];
@@ -1610,7 +1683,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vbd_create;
       flags=[];
     };
-   "vbd-destroy",
+    "vbd-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1618,7 +1691,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vbd_destroy;
       flags=[];
     };
-   "vbd-insert",
+    "vbd-insert",
     {
       reqd=["uuid"; "vdi-uuid"];
       optn=[];
@@ -1626,7 +1699,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vbd_insert;
       flags=[];
     };
-   "vbd-eject",
+    "vbd-eject",
     {
       reqd=["uuid"];
       optn=[];
@@ -1634,7 +1707,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vbd_eject;
       flags=[];
     };
-   "vbd-plug",
+    "vbd-plug",
     {
       reqd=["uuid"];
       optn=[];
@@ -1642,7 +1715,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vbd_plug;
       flags=[];
     };
-   "vbd-unplug",
+    "vbd-unplug",
     {
       reqd=["uuid"];
       optn=["timeout"; "force"];
@@ -1650,23 +1723,23 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vbd_unplug;
       flags=[];
     };
-   "vbd-pause",
-     {
-       reqd=["uuid"];
-       optn=[];
-       help="Request that a backend block device pauses itself.";
-       implementation=No_fd Cli_operations.vbd_pause;
-       flags=[Hidden];
-     };
-   "vbd-unpause",
-     {
-       reqd=["uuid"; "token"];
-       optn=[];
-       help="Request that a backend block device unpauses itself.";
-       implementation=No_fd Cli_operations.vbd_unpause;
-       flags=[Hidden];
-     };
-   "sr-create",
+    "vbd-pause",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Request that a backend block device pauses itself.";
+      implementation=No_fd Cli_operations.vbd_pause;
+      flags=[Hidden];
+    };
+    "vbd-unpause",
+    {
+      reqd=["uuid"; "token"];
+      optn=[];
+      help="Request that a backend block device unpauses itself.";
+      implementation=No_fd Cli_operations.vbd_unpause;
+      flags=[Hidden];
+    };
+    "sr-create",
     {
       reqd=["name-label";"type"];
       optn=["host-uuid";"device-config:";"shared";"physical-size";"content-type";"sm-config:"];
@@ -1674,7 +1747,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=With_fd Cli_operations.sr_create;
       flags=[];
     };
-   "sr-probe",
+    "sr-probe",
     {
       reqd=["type"];
       optn=["host-uuid";"device-config:";"sm-config:"];
@@ -1682,7 +1755,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.sr_probe;
       flags=[];
     };
-   "sr-scan",
+    "sr-scan",
     {
       reqd=["uuid"];
       optn=[];
@@ -1690,7 +1763,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.sr_scan;
       flags=[];
     };
-   "sr-introduce",
+    "sr-introduce",
     {
       reqd=["name-label"; "type"; "uuid"];
       optn=["shared"; "content-type"];
@@ -1698,7 +1771,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.sr_introduce;
       flags=[];
     };
-   "sr-destroy",
+    "sr-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1706,7 +1779,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.sr_destroy;
       flags=[];
     };
-   "sr-forget",
+    "sr-forget",
     {
       reqd=["uuid"];
       optn=[];
@@ -1714,7 +1787,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.sr_forget;
       flags=[];
     };
-   "sr-update",
+    "sr-update",
     {
       reqd=["uuid"];
       optn=[];
@@ -1722,58 +1795,58 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.sr_update;
       flags=[];
     };
-   "sr-enable-database-replication",
-   {
-     reqd=["uuid"];
-     optn=[];
-     help="Enable database replication to the SR.";
-     implementation=No_fd Cli_operations.sr_enable_database_replication;
-     flags=[];
-   };
-   "sr-disable-database-replication",
-   {
-     reqd=["uuid"];
-     optn=[];
-     help="Disable database replication to the SR.";
-     implementation=No_fd Cli_operations.sr_disable_database_replication;
-     flags=[];
-   };
-   "sr-data-source-list",
-   {
-     reqd=[]; 
-     optn=[];
-     help="List the data sources that can be recorded for a SR.";
-     implementation=No_fd Cli_operations.sr_data_source_list;
-     flags=[Sr_selectors];
-   };
-   "sr-data-source-record",
-   {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Record the specified data source for a SR.";
-     implementation=No_fd Cli_operations.sr_data_source_record;
-     flags=[Sr_selectors];
-   };
-
-   "sr-data-source-query",
+    "sr-enable-database-replication",
     {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Query the last value read from a SR data source.";
-     implementation=No_fd Cli_operations.sr_data_source_query;
-     flags=[Sr_selectors];
-   };
-
-   "sr-data-source-forget",
+      reqd=["uuid"];
+      optn=[];
+      help="Enable database replication to the SR.";
+      implementation=No_fd Cli_operations.sr_enable_database_replication;
+      flags=[];
+    };
+    "sr-disable-database-replication",
     {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Stop recording the specified data source for a SR, and forget all of the recorded data.";
-     implementation=No_fd Cli_operations.sr_data_source_forget;
-     flags=[Sr_selectors];
-   };
+      reqd=["uuid"];
+      optn=[];
+      help="Disable database replication to the SR.";
+      implementation=No_fd Cli_operations.sr_disable_database_replication;
+      flags=[];
+    };
+    "sr-data-source-list",
+    {
+      reqd=[];
+      optn=[];
+      help="List the data sources that can be recorded for a SR.";
+      implementation=No_fd Cli_operations.sr_data_source_list;
+      flags=[Sr_selectors];
+    };
+    "sr-data-source-record",
+    {
+      reqd=["data-source"];
+      optn=[];
+      help="Record the specified data source for a SR.";
+      implementation=No_fd Cli_operations.sr_data_source_record;
+      flags=[Sr_selectors];
+    };
 
-   "vdi-create",
+    "sr-data-source-query",
+    {
+      reqd=["data-source"];
+      optn=[];
+      help="Query the last value read from a SR data source.";
+      implementation=No_fd Cli_operations.sr_data_source_query;
+      flags=[Sr_selectors];
+    };
+
+    "sr-data-source-forget",
+    {
+      reqd=["data-source"];
+      optn=[];
+      help="Stop recording the specified data source for a SR, and forget all of the recorded data.";
+      implementation=No_fd Cli_operations.sr_data_source_forget;
+      flags=[Sr_selectors];
+    };
+
+    "vdi-create",
     {
       reqd=["sr-uuid";"name-label";"virtual-size"];
       optn=["sm-config:";"sharable"; "tags:";"type"];
@@ -1781,7 +1854,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_create;
       flags=[];
     };
-   "vdi-destroy",
+    "vdi-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1789,7 +1862,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_destroy;
       flags=[];
     };
-   "vdi-forget",
+    "vdi-forget",
     {
       reqd=["uuid"];
       optn=[];
@@ -1797,7 +1870,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_forget;
       flags=[];
     };
-   "vdi-update",
+    "vdi-update",
     {
       reqd=["uuid"];
       optn=[];
@@ -1805,7 +1878,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_update;
       flags=[];
     };
-   "vdi-introduce",
+    "vdi-introduce",
     {
       reqd=["uuid"; "sr-uuid";"type";"location"];
       optn=["name-description"; "sharable"; "read-only"; "other-config:"; "xenstore-data:"; "sm-config:"; "name-label"];
@@ -1813,23 +1886,23 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_introduce;
       flags=[];
     };
-   "vdi-import",
-   {
-     reqd=["uuid"; "filename"];
-     optn=["format"; "progress"];
-     help="Import a raw VDI.";
-     implementation=With_fd Cli_operations.vdi_import;
+    "vdi-import",
+    {
+      reqd=["uuid"; "filename"];
+      optn=["format"; "progress"];
+      help="Import a raw VDI.";
+      implementation=With_fd Cli_operations.vdi_import;
       flags=[];
-   };
-   "vdi-export",
-   {
-     reqd = [ "uuid"; "filename" ];
-     optn = [ "format"; "base"; "progress" ];
-     help = "Export a VDI.";
-     implementation=With_fd Cli_operations.vdi_export;
-     flags = [];
-   };
-   "vdi-resize",
+    };
+    "vdi-export",
+    {
+      reqd = [ "uuid"; "filename" ];
+      optn = [ "format"; "base"; "progress" ];
+      help = "Export a VDI.";
+      implementation=With_fd Cli_operations.vdi_export;
+      flags = [];
+    };
+    "vdi-resize",
     {
       reqd=["uuid"; "disk-size"];
       optn=["online"];
@@ -1837,15 +1910,15 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_resize;
       flags=[];
     };
-   "vdi-generate-config",
-   {
-     reqd=["host-uuid"; "uuid"];
-     optn=[];
-     help="Generate a static VDI configuration.";
-     implementation=No_fd Cli_operations.vdi_generate_config;
-     flags=[Hidden];
-   };
-   "vdi-copy",
+    "vdi-generate-config",
+    {
+      reqd=["host-uuid"; "uuid"];
+      optn=[];
+      help="Generate a static VDI configuration.";
+      implementation=No_fd Cli_operations.vdi_generate_config;
+      flags=[Hidden];
+    };
+    "vdi-copy",
     {
       reqd=["uuid"];
       optn=["sr-uuid"; "base-vdi-uuid"; "into-vdi-uuid"];
@@ -1853,15 +1926,15 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_copy;
       flags=[];
     };
-   "vdi-pool-migrate",
+    "vdi-pool-migrate",
     {
       reqd=["uuid"; "sr-uuid"];
-		optn=[];
+      optn=[];
       help="Migrate a VDI to a specified SR, while the VDI is attached to a running guest.";
       implementation=No_fd Cli_operations.vdi_pool_migrate;
       flags=[];
     };
-   "vdi-clone",
+    "vdi-clone",
     {
       reqd=["uuid"];
       optn=["driver-params-"; "new-name-label"; "new-name-description"];
@@ -1869,7 +1942,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_clone;
       flags=[];
     };
-   "vdi-snapshot",
+    "vdi-snapshot",
     {
       reqd=["uuid"];
       optn=["driver-params-"];
@@ -1877,7 +1950,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_snapshot;
       flags=[];
     };
-   "vdi-unlock",
+    "vdi-unlock",
     {
       reqd=["uuid"];
       optn=["force"];
@@ -1885,7 +1958,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.vdi_unlock;
       flags=[];
     };
-   "diagnostic-vdi-status",
+    "diagnostic-vdi-status",
     {
       reqd=["uuid"];
       optn=[];
@@ -1893,7 +1966,7 @@ there are two or more empty CD devices, please use the command 'vbd-insert' and 
       implementation=No_fd Cli_operations.diagnostic_vdi_status;
       flags=[];
     };
-   "pbd-create",
+    "pbd-create",
     {
       reqd=["host-uuid";"sr-uuid"];
       optn=["device-config:"];
@@ -1902,7 +1975,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.pbd_create;
       flags=[];
     };
-   "pbd-destroy",
+    "pbd-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1910,7 +1983,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.pbd_destroy;
       flags=[];
     };
-   "pbd-plug",
+    "pbd-plug",
     {
       reqd=["uuid"];
       optn=[];
@@ -1918,7 +1991,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.pbd_plug;
       flags=[];
     };
-   "pbd-unplug",
+    "pbd-unplug",
     {
       reqd=["uuid"];
       optn=[];
@@ -1926,23 +1999,23 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.pbd_unplug;
       flags=[];
     };
-   "network-create",
-   {
-     reqd=["name-label"]; 
-     optn=["name-description"; "MTU"];
-     help="Create a new network.";
-     implementation=No_fd Cli_operations.net_create;
+    "network-create",
+    {
+      reqd=["name-label"];
+      optn=["name-description"; "MTU"];
+      help="Create a new network.";
+      implementation=No_fd Cli_operations.net_create;
       flags=[];
-   };
-   "network-destroy",
-   {
-     reqd=["uuid"];
-     optn=[];
-     help="Delete an existing network.";
-     implementation=No_fd Cli_operations.net_destroy;
+    };
+    "network-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Delete an existing network.";
+      implementation=No_fd Cli_operations.net_destroy;
       flags=[];
-   };
-   "network-attach",
+    };
+    "network-attach",
     {
       reqd=["uuid"; "host-uuid"];
       optn=[];
@@ -1950,7 +2023,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.net_attach;
       flags=[Hidden];
     };
-   "vif-create",
+    "vif-create",
     {
       reqd=["device";"network-uuid";"vm-uuid"];
       optn=["mac"];
@@ -1958,7 +2031,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vif_create;
       flags=[];
     };
-   "vif-destroy",
+    "vif-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -1966,7 +2039,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vif_destroy;
       flags=[];
     };
-   "vif-plug",
+    "vif-plug",
     {
       reqd=["uuid"];
       optn=[];
@@ -1974,7 +2047,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vif_plug;
       flags=[];
     };
-   "vif-unplug",
+    "vif-unplug",
     {
       reqd=["uuid"];
       optn=["force"];
@@ -1982,7 +2055,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vif_unplug;
       flags=[];
     };
-   "vif-configure-ipv4",
+    "vif-configure-ipv4",
     {
       reqd=["uuid"; "mode"];
       optn=["address"; "gateway"];
@@ -1990,7 +2063,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vif_configure_ipv4;
       flags=[];
     };
-   "vif-configure-ipv6",
+    "vif-configure-ipv6",
     {
       reqd=["uuid"; "mode"];
       optn=["address"; "gateway"];
@@ -1998,7 +2071,15 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vif_configure_ipv6;
       flags=[];
     };
-   "vm-create",
+    "vif-move",
+    {
+      reqd=["uuid";"network-uuid"];
+      optn=[];
+      help="Move the VIF to another network.";
+      implementation=No_fd Cli_operations.vif_move;
+      flags=[];
+    };
+    "vm-create",
     {
       reqd=["name-label"];
       optn=["name-description"];
@@ -2006,7 +2087,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vm_create;
       flags=[Hidden];
     };
-   "vm-destroy",
+    "vm-destroy",
     {
       reqd=["uuid"];
       optn=[];
@@ -2014,23 +2095,23 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.vm_destroy;
       flags=[];
     };
-		"vm-recover",
-		{
-			reqd=["uuid"];
-			optn=["database:";"force"];
-			help="Recover a VM from the database contained in the supplied VDI.";
-			implementation=No_fd Cli_operations.vm_recover;
-			flags=[];
-		};
-		"vm-assert-can-be-recovered",
-		{
-			reqd=["uuid"];
-			optn=["database:"];
-			help="Test whether storage is available to recover this VM.";
-			implementation=No_fd Cli_operations.vm_assert_can_be_recovered;
-			flags=[];
-		};
-   "diagnostic-vm-status",
+    "vm-recover",
+    {
+      reqd=["uuid"];
+      optn=["database:";"force"];
+      help="Recover a VM from the database contained in the supplied VDI.";
+      implementation=No_fd Cli_operations.vm_recover;
+      flags=[];
+    };
+    "vm-assert-can-be-recovered",
+    {
+      reqd=["uuid"];
+      optn=["database:"];
+      help="Test whether storage is available to recover this VM.";
+      implementation=No_fd Cli_operations.vm_assert_can_be_recovered;
+      flags=[];
+    };
+    "diagnostic-vm-status",
     {
       reqd=["uuid"];
       optn=[];
@@ -2040,7 +2121,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
     };
 (*
    "diagnostic-event-deltas",
-    { 
+    {
       reqd=["class"];
       optn=[];
       help="Print the changes that are happening to all objects of class specified.";
@@ -2048,7 +2129,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       flags=[];
     };
 *)
-   "diagnostic-license-status",
+    "diagnostic-license-status",
     {
       reqd=[];
       optn=[];
@@ -2057,7 +2138,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       flags=[];
     };
 
-   "event-wait",
+    "event-wait",
     {
       reqd=["class"];
       optn=[];
@@ -2065,43 +2146,43 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.event_wait;
       flags=[];
     };
-   "host-data-source-list",
+    "host-data-source-list",
     {
-      reqd=[]; 
+      reqd=[];
       optn=[];
       help="List the data sources that can be recorded for a Host.";
       implementation=No_fd Cli_operations.host_data_source_list;
       flags=[Host_selectors];
     };
 
-   "host-data-source-record",
-   {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Record the specified data source for a Host.";
-     implementation=No_fd Cli_operations.host_data_source_record;
-     flags=[Host_selectors];
-   };
-
-   "host-data-source-query",
+    "host-data-source-record",
     {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Query the last value read from a Host data source.";
-     implementation=No_fd Cli_operations.host_data_source_query;
-     flags=[Host_selectors];
-   };
+      reqd=["data-source"];
+      optn=[];
+      help="Record the specified data source for a Host.";
+      implementation=No_fd Cli_operations.host_data_source_record;
+      flags=[Host_selectors];
+    };
 
-   "host-data-source-forget",
+    "host-data-source-query",
     {
-     reqd=["data-source"]; 
-     optn=[];
-     help="Stop recording the specified data source for a Host, and forget all of the recorded data.";
-     implementation=No_fd Cli_operations.host_data_source_forget;
-     flags=[Host_selectors];
-   };
+      reqd=["data-source"];
+      optn=[];
+      help="Query the last value read from a Host data source.";
+      implementation=No_fd Cli_operations.host_data_source_query;
+      flags=[Host_selectors];
+    };
 
-   "host-license-add",
+    "host-data-source-forget",
+    {
+      reqd=["data-source"];
+      optn=[];
+      help="Stop recording the specified data source for a Host, and forget all of the recorded data.";
+      implementation=No_fd Cli_operations.host_data_source_forget;
+      flags=[Host_selectors];
+    };
+
+    "host-license-add",
     {
       reqd=["license-file"];
       optn=["host-uuid"];
@@ -2109,7 +2190,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=With_fd Cli_operations.host_license_add;
       flags=[];
     };
-   "host-license-remove",
+    "host-license-remove",
     {
       reqd=[];
       optn=["host-uuid"];
@@ -2117,7 +2198,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.host_license_remove;
       flags=[];
     };
-   "host-license-view",
+    "host-license-view",
     {
       reqd=[];
       optn=["host-uuid"];
@@ -2141,7 +2222,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.host_all_editions;
       flags=[];
     };
-   "host-evacuate",
+    "host-evacuate",
     {
       reqd=[];
       optn=[];
@@ -2149,7 +2230,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.host_evacuate;
       flags=[Host_selectors];
     };
-   "host-get-vms-which-prevent-evacuation",
+    "host-get-vms-which-prevent-evacuation",
     {
       reqd=["uuid"];
       optn=[];
@@ -2157,7 +2238,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.host_get_vms_which_prevent_evacuation;
       flags=[];
     };
-   "host-shutdown-agent",
+    "host-shutdown-agent",
     {
       reqd=[];
       optn=[];
@@ -2165,7 +2246,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd_local_session Cli_operations.host_shutdown_agent;
       flags=[Neverforward];
     };
-   "diagnostic-compact",
+    "diagnostic-compact",
     {
       reqd=[];
       optn=[];
@@ -2173,7 +2254,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.diagnostic_compact;
       flags=[Neverforward];
     };
-   "diagnostic-gc-stats",
+    "diagnostic-gc-stats",
     {
       reqd=[];
       optn=[];
@@ -2181,7 +2262,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.diagnostic_gc_stats;
       flags=[Neverforward];
     };
-   "diagnostic-timing-stats",
+    "diagnostic-timing-stats",
     {
       reqd=[];
       optn=[];
@@ -2189,7 +2270,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.diagnostic_timing_stats;
       flags=[];
     };
-   "diagnostic-db-stats",
+    "diagnostic-db-stats",
     {
       reqd=[];
       optn=[];
@@ -2197,15 +2278,15 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.diagnostic_db_stats;
       flags=[Neverforward];
     };
-   "diagnostic-net-stats",
-	{
-		reqd=[];
-		optn=["uri"; "method"; "params"];
-		help="Print network stats.";
-		implementation=No_fd Cli_operations.diagnostic_net_stats;
-		flags=[Neverforward];
-	};
-   "diagnostic-db-log",
+    "diagnostic-net-stats",
+    {
+      reqd=[];
+      optn=["uri"; "method"; "params"];
+      help="Print network stats.";
+      implementation=No_fd Cli_operations.diagnostic_net_stats;
+      flags=[Neverforward];
+    };
+    "diagnostic-db-log",
     {
       reqd=[];
       optn=[];
@@ -2213,7 +2294,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.diagnostic_db_log;
       flags=[Neverforward];
     };
-   "host-get-sm-diagnostics",
+    "host-get-sm-diagnostics",
     {
       reqd=["uuid"];
       optn=[];
@@ -2221,15 +2302,15 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.host_get_sm_diagnostics;
       flags=[];
     };
-   "host-get-thread-diagnostics",
+    "host-get-thread-diagnostics",
     {
       reqd=["uuid"];
       optn=[];
       help="Display per-host thread diagnostic information.";
       implementation=No_fd Cli_operations.host_get_thread_diagnostics;
       flags=[];
-    };	  
-   "host-sm-dp-destroy",
+    };
+    "host-sm-dp-destroy",
     {
       reqd=["uuid"; "dp"];
       optn=["allow-leak"];
@@ -2237,7 +2318,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=No_fd Cli_operations.host_sm_dp_destroy;
       flags=[];
     };
-   "task-cancel",
+    "task-cancel",
     {
       reqd=["uuid"];
       optn=[];
@@ -2274,14 +2355,14 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
     };
 *)
 
-   "pool-vlan-create",
-   {
-     reqd=["pif-uuid"; "vlan"; "network-uuid"];
-     optn=[];
-     help="Create a new VLAN on each host in a pool.";
-     implementation=No_fd Cli_operations.pool_vlan_create;
-     flags=[];
-   };
+    "pool-vlan-create",
+    {
+      reqd=["pif-uuid"; "vlan"; "network-uuid"];
+      optn=[];
+      help="Create a new VLAN on each host in a pool.";
+      implementation=No_fd Cli_operations.pool_vlan_create;
+      flags=[];
+    };
 
 
     "pool-ha-enable",
@@ -2357,7 +2438,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       implementation=With_fd_local_session Cli_operations.host_ha_xapi_healthcheck;
       flags=[Hidden;Neverforward]
     };
-    
+
 (*
    "host-ha-query",
     {
@@ -2372,8 +2453,8 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
 (*
     "subject-list",
     {
-      reqd=[]; 
-      optn=[]; 
+      reqd=[];
+      optn=[];
       help="Returns a list of subject names that can access the pool";
       implementation=No_fd Cli_operations.subject_list;
       flags=[]
@@ -2382,7 +2463,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
     "subject-add",
     {
       reqd=["subject-name"];
-      optn=[]; 
+      optn=[];
       help="Add a subject to the list of subjects that can access the pool";
       implementation=No_fd Cli_operations.subject_add;
       flags=[]
@@ -2391,7 +2472,7 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
     "subject-remove",
     {
       reqd=["subject-uuid"];
-      optn=[]; 
+      optn=[];
       help="Remove a subject from the list of subjects that can access the pool";
       implementation=No_fd Cli_operations.subject_remove;
       flags=[]
@@ -2424,16 +2505,16 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       flags=[]
     };
 
-(*  RBAC 2.0 only
-    "role-create",
-    {
-      reqd=["id";"name"];
-      optn=[]; 
-      help="Add a role to the pool";
-      implementation=No_fd Cli_operations.role_create;
-      flags=[]
-    };
-*)
+    (*  RBAC 2.0 only
+        "role-create",
+        {
+          reqd=["id";"name"];
+          optn=[];
+          help="Add a role to the pool";
+          implementation=No_fd Cli_operations.role_create;
+          flags=[]
+        };
+    *)
     "session-subject-identifier-list",
     {
       reqd=[];
@@ -2470,171 +2551,236 @@ add a mapping of 'path' -> '/tmp', the command line should contain the argument 
       flags=[Host_selectors]
     };
 
-		"secret-create",
-			{ reqd = ["value"]
-			; optn = []
-			; help = "Create a secret"
-			; implementation = No_fd Cli_operations.secret_create
-			; flags = []
-			};
+    "secret-create",
+    { reqd = ["value"]
+    ; optn = []
+    ; help = "Create a secret"
+    ; implementation = No_fd Cli_operations.secret_create
+    ; flags = []
+    };
 
-		"secret-destroy",
-			{ reqd = ["uuid"]
-			; optn = []
-			; help = "Destroy a secret"
-			; implementation = No_fd Cli_operations.secret_destroy
-			; flags = []
-			};
+    "secret-destroy",
+    { reqd = ["uuid"]
+    ; optn = []
+    ; help = "Destroy a secret"
+    ; implementation = No_fd Cli_operations.secret_destroy
+    ; flags = []
+    };
 
-		"vmss-create",
-		{
-			reqd=["name-label";"type";"frequency"];
-			optn=["name-description";"enabled";"schedule:";"retained-snapshots"];
-			help="Create a VM snapshot schedule.";
-			implementation=No_fd Cli_operations.vmss_create;
-			flags=[];
-		};
+    "vmss-create",
+    {
+      reqd=["name-label";"type";"frequency"];
+      optn=["name-description";"enabled";"schedule:";"retained-snapshots"];
+      help="Create a VM snapshot schedule.";
+      implementation=No_fd Cli_operations.vmss_create;
+      flags=[];
+    };
 
-		"vmss-destroy",
-		{
-			reqd=["uuid"];
-			optn=[];
-			help="Destroy a VM snapshot schedule.";
-			implementation=No_fd Cli_operations.vmss_destroy;
-			flags=[];
-		};
+    "vmss-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Destroy a VM snapshot schedule.";
+      implementation=No_fd Cli_operations.vmss_destroy;
+      flags=[];
+    };
 
-		"appliance-create",
-		{
-			reqd=["name-label"];
-			optn=["name-description"];
-			help="Create a VM appliance.";
-			implementation=No_fd Cli_operations.vm_appliance_create;
-			flags=[];
-		};
-		"appliance-destroy",
-		{
-			reqd=["uuid"];
-			optn=[];
-			help="Destroy a VM appliance.";
-			implementation=No_fd Cli_operations.vm_appliance_destroy;
-			flags=[];
-		};
-		"appliance-start",
-		{
-			reqd=["uuid"];
-			optn=["paused"];
-			help="Start a VM appliance.";
-			implementation=No_fd Cli_operations.vm_appliance_start;
-			flags=[];
-		};
-		"appliance-shutdown",
-		{
-			reqd=["uuid"];
-			optn=["force"];
-			help="Shut down all VMs in a VM appliance.";
-			implementation=No_fd Cli_operations.vm_appliance_shutdown;
-			flags=[];
-		};
-		"appliance-recover",
-		{
-			reqd=["uuid"];
-			optn=["database:";"force"];
-			help="Recover a VM appliance from the database contained in the supplied VDI.";
-			implementation=No_fd Cli_operations.vm_appliance_recover;
-			flags=[];
-		};
-		"appliance-assert-can-be-recovered",
-		{
-			reqd=["uuid"];
-			optn=["database:"];
-			help="Test whether storage is available to recover this VM appliance.";
-			implementation=No_fd Cli_operations.vm_appliance_assert_can_be_recovered;
-			flags=[];
-		};
-		"gpu-group-create",
-		{
-			reqd=["name-label"];
-			optn=["name-description"];
-			help="Create an empty GPU group";
-			implementation=No_fd Cli_operations.gpu_group_create;
-			flags=[];
-		};
-		"gpu-group-destroy",
-		{
-			reqd=["uuid"];
-			optn=[""];
-			help="Destroy a GPU group";
-			implementation=No_fd Cli_operations.gpu_group_destroy;
-			flags=[];
-		};
-		"gpu-group-get-remaining-capacity",
-		{
-			reqd=["uuid";"vgpu-type-uuid"];
-			optn=[];
-			help="Calculate the number of VGPUs of the specified type which still be started in the group";
-			implementation = No_fd Cli_operations.gpu_group_get_remaining_capacity;
-			flags=[];
-		};
-	"vgpu-create",
-	{
-		reqd=["vm-uuid";"gpu-group-uuid"];
-		optn=["vgpu-type-uuid"]; (* "device" should be added here once we allow >1 vGPU/VM *)
-		help="Create a vGPU.";
-		implementation=No_fd Cli_operations.vgpu_create;
-		flags=[];
-	};
-	"vgpu-destroy",
-	{
-		reqd=["uuid"];
-		optn=[];
-		help="Destroy a vGPU.";
-		implementation=No_fd Cli_operations.vgpu_destroy;
-		flags=[];
-	};
-		"drtask-create",
-		{
-			reqd=["type"];
-			optn=["device-config:"; "sr-whitelist"];
-			help="Create a disaster recovery task.";
-			implementation=No_fd Cli_operations.dr_task_create;
-			flags=[]
-		};
-		"drtask-destroy",
-		{
-			reqd=["uuid"];
-			optn=[];
-			help="Destroy a disaster recovery task.";
-			implementation=No_fd Cli_operations.dr_task_destroy;
-			flags=[]
-		};
+    "appliance-create",
+    {
+      reqd=["name-label"];
+      optn=["name-description"];
+      help="Create a VM appliance.";
+      implementation=No_fd Cli_operations.vm_appliance_create;
+      flags=[];
+    };
+    "appliance-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Destroy a VM appliance.";
+      implementation=No_fd Cli_operations.vm_appliance_destroy;
+      flags=[];
+    };
+    "appliance-start",
+    {
+      reqd=["uuid"];
+      optn=["paused"];
+      help="Start a VM appliance.";
+      implementation=No_fd Cli_operations.vm_appliance_start;
+      flags=[];
+    };
+    "appliance-shutdown",
+    {
+      reqd=["uuid"];
+      optn=["force"];
+      help="Shut down all VMs in a VM appliance.";
+      implementation=No_fd Cli_operations.vm_appliance_shutdown;
+      flags=[];
+    };
+    "appliance-recover",
+    {
+      reqd=["uuid"];
+      optn=["database:";"force"];
+      help="Recover a VM appliance from the database contained in the supplied VDI.";
+      implementation=No_fd Cli_operations.vm_appliance_recover;
+      flags=[];
+    };
+    "appliance-assert-can-be-recovered",
+    {
+      reqd=["uuid"];
+      optn=["database:"];
+      help="Test whether storage is available to recover this VM appliance.";
+      implementation=No_fd Cli_operations.vm_appliance_assert_can_be_recovered;
+      flags=[];
+    };
+    "gpu-group-create",
+    {
+      reqd=["name-label"];
+      optn=["name-description"];
+      help="Create an empty GPU group";
+      implementation=No_fd Cli_operations.gpu_group_create;
+      flags=[];
+    };
+    "gpu-group-destroy",
+    {
+      reqd=["uuid"];
+      optn=[""];
+      help="Destroy a GPU group";
+      implementation=No_fd Cli_operations.gpu_group_destroy;
+      flags=[];
+    };
+    "gpu-group-get-remaining-capacity",
+    {
+      reqd=["uuid";"vgpu-type-uuid"];
+      optn=[];
+      help="Calculate the number of VGPUs of the specified type which still be started in the group";
+      implementation = No_fd Cli_operations.gpu_group_get_remaining_capacity;
+      flags=[];
+    };
+    "vgpu-create",
+    {
+      reqd=["vm-uuid";"gpu-group-uuid"];
+      optn=["vgpu-type-uuid"]; (* "device" should be added here once we allow >1 vGPU/VM *)
+      help="Create a vGPU.";
+      implementation=No_fd Cli_operations.vgpu_create;
+      flags=[];
+    };
+    "vgpu-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Destroy a vGPU.";
+      implementation=No_fd Cli_operations.vgpu_destroy;
+      flags=[];
+    };
+    "drtask-create",
+    {
+      reqd=["type"];
+      optn=["device-config:"; "sr-whitelist"];
+      help="Create a disaster recovery task.";
+      implementation=No_fd Cli_operations.dr_task_create;
+      flags=[]
+    };
+    "drtask-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Destroy a disaster recovery task.";
+      implementation=No_fd Cli_operations.dr_task_destroy;
+      flags=[]
+    };
 
-		"pgpu-enable-dom0-access",
-		{
-			reqd=["uuid"];
-			optn=[];
-			help="Enable PGPU access to dom0.";
-			implementation=No_fd Cli_operations.pgpu_enable_dom0_access;
-			flags=[]
-		};
+    "pgpu-enable-dom0-access",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Enable PGPU access to dom0.";
+      implementation=No_fd Cli_operations.pgpu_enable_dom0_access;
+      flags=[]
+    };
 
-		"pgpu-disable-dom0-access",
-		{
-			reqd=["uuid"];
-			optn=[];
-			help="Disable PGPU access to dom0.";
-			implementation=No_fd Cli_operations.pgpu_disable_dom0_access;
-			flags=[]
-		};
+    "pgpu-disable-dom0-access",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Disable PGPU access to dom0.";
+      implementation=No_fd Cli_operations.pgpu_disable_dom0_access;
+      flags=[]
+    };
 
-		"lvhd-enable-thin-provisioning",
-		{
-			reqd=["sr-uuid"; "initial-allocation"; "allocation-quantum"];
-			optn=[];
-			help="Enable thin-provisioning on an LVHD SR.";
-			implementation=No_fd Cli_operations.lvhd_enable_thin_provisioning;
-			flags=[];
-		}
+    "lvhd-enable-thin-provisioning",
+    {
+      reqd=["sr-uuid"; "initial-allocation"; "allocation-quantum"];
+      optn=[];
+      help="Enable thin-provisioning on an LVHD SR.";
+      implementation=No_fd Cli_operations.lvhd_enable_thin_provisioning;
+      flags=[Host_selectors];
+    };
+    "pvs-site-introduce",
+    {
+      reqd=["name-label"];
+      optn=["name-description"; "pvs-uuid"];
+      help="Introduce new PVS site";
+      implementation=No_fd Cli_operations.PVS_site.introduce;
+      flags=[];
+    };
+    "pvs-site-forget",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Forget a PVS site";
+      implementation=No_fd Cli_operations.PVS_site.forget;
+      flags=[];
+    };
+    "pvs-server-introduce",
+    {
+      reqd=["addresses"; "first-port"; "last-port"; "pvs-site-uuid"];
+      optn=[];
+      help="Introduce new PVS server";
+      implementation=No_fd Cli_operations.PVS_server.introduce;
+      flags=[];
+    };
+    "pvs-server-forget",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Forget a PVS server";
+      implementation=No_fd Cli_operations.PVS_server.forget;
+      flags=[];
+    };
+
+    "pvs-proxy-create",
+    {
+      reqd=["pvs-site-uuid"; "vif-uuid"];
+      optn=[];
+      help="Configure a VM/VIF to use a PVS proxy";
+      implementation=No_fd Cli_operations.PVS_proxy.create;
+      flags=[];
+    };
+    "pvs-proxy-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Remove (or switch off) a PVS proxy for this VIF/VM";
+      implementation=No_fd Cli_operations.PVS_proxy.destroy;
+      flags=[];
+    };
+    "pvs-cache-storage-create",
+    {
+      reqd=["sr-uuid"; "pvs-site-uuid"; "size"];
+      optn=[];
+      help="Configure a PVS cache on a given SR for a given host";
+      implementation=No_fd Cli_operations.PVS_cache_storage.create;
+      flags=[Host_selectors];
+    };
+    "pvs-cache-storage-destroy",
+    {
+      reqd=["uuid"];
+      optn=[];
+      help="Remove a PVS cache";
+      implementation=No_fd Cli_operations.PVS_cache_storage.destroy;
+      flags=[];
+    };
   ]
 
 let cmdtable : (string, cmd_spec) Hashtbl.t =
@@ -2646,16 +2792,16 @@ let cmdtable_geneva : (string, cmd_spec) Hashtbl.t =
 let populated = ref false
 
 let populate_cmdtable rpc session_id =
-  if !populated then () 
+  if !populated then ()
   else
     begin
       populated := true;
       List.iter
-	(fun (n,c)->Hashtbl.add cmdtable n c)
-	(cmdtable_data @ (Cli_operations.gen_cmds rpc session_id)); (* Autogenerated commands too *)
+        (fun (n,c)->Hashtbl.add cmdtable n c)
+        (cmdtable_data @ (Cli_operations.gen_cmds rpc session_id)); (* Autogenerated commands too *)
       List.iter
-	(fun (n,c)->Hashtbl.add cmdtable_geneva n c)
-	(Cli_operations_geneva.cmdtable_data)
+        (fun (n,c)->Hashtbl.add cmdtable_geneva n c)
+        (Cli_operations_geneva.cmdtable_data)
     end
 
 (* ----------------------------------------------------------------------
@@ -2689,13 +2835,13 @@ let convert_switch switch =
     Backtrace.reraise e (ParseError ("Unknown switch: "^switch))
 
 type token =
-    | Id of string
-    | Eq
-	
+  | Id of string
+  | Eq
+
 type commandline =
-    { cmdname : string;
-      argv0 : string;
-      params : (string*string) list }
+  { cmdname : string;
+    argv0 : string;
+    params : (string*string) list }
 
 let get_params cmd = cmd.params
 let get_cmdname cmd = cmd.cmdname
@@ -2708,14 +2854,14 @@ let get_reqd_param cmd p =
 
 let string_of_token t =
   match t with
-    | Id s -> "Id("^s^")"
-    | Eq -> "Eq"
+  | Id s -> "Id("^s^")"
+  | Eq -> "Eq"
 
 let starts_with s prefix =
   let s_len = String.length s in
   let p_len = String.length prefix in
   (p_len<=s_len) &&
-    (String.sub s 0 p_len)=prefix
+  (String.sub s 0 p_len)=prefix
 
 let tokens_of_argv argv_list =
 
@@ -2725,101 +2871,101 @@ let tokens_of_argv argv_list =
   let split_on_eq s =
     let rec f cl sofar =
       let flush_to_id() =
-	if sofar<>[] then
-	  add_param (Id (String.implode (List.rev sofar))) in
+        if sofar<>[] then
+          add_param (Id (String.implode (List.rev sofar))) in
 
-        match cl with
-	  [] -> flush_to_id()
-	| ('='::cs) ->
-	    (flush_to_id();
-	     add_param Eq;
-	     f cs [])
-	| (c::cs) ->
-	    f cs (c::sofar)
+      match cl with
+        [] -> flush_to_id()
+      | ('='::cs) ->
+        (flush_to_id();
+         add_param Eq;
+         f cs [])
+      | (c::cs) ->
+        f cs (c::sofar)
     in f (String.explode s) [] in
 
   let rec f argv_list =
     match argv_list with
-	[] -> ()
-      | (x::xs) ->
-	  (* x may be a unary switch: *)
-	  if (starts_with x "--") then
-	    begin
-	      add_param (Id (convert_switch x));
-	      add_param Eq;
-	      add_param (Id "true");
-	      f xs
-	    end
-	      (* x may be a diadic switch *)
-	  else if (starts_with x "-") then
-	    begin
-	      match xs with
-		  [] ->
-		    raise (ParseError ("Switch "^x^" requires parameter"))
-		| (z::zs) ->
-		    begin
-		      add_param (Id (convert_switch x));
-		      add_param Eq;
-		      add_param (Id z);
-		      f zs
-		    end
-	    end
-	  else
-	    (* otherwise tokenize, splitting on equals: *)
-	    begin
-	      split_on_eq x;
-	      f xs
-	    end in
-    begin
-      f argv_list;
-      List.rev (!tokens)
-    end
+      [] -> ()
+    | (x::xs) ->
+      (* x may be a unary switch: *)
+      if (starts_with x "--") then
+        begin
+          add_param (Id (convert_switch x));
+          add_param Eq;
+          add_param (Id "true");
+          f xs
+        end
+        (* x may be a diadic switch *)
+      else if (starts_with x "-") then
+        begin
+          match xs with
+            [] ->
+            raise (ParseError ("Switch "^x^" requires parameter"))
+          | (z::zs) ->
+            begin
+              add_param (Id (convert_switch x));
+              add_param Eq;
+              add_param (Id z);
+              f zs
+            end
+        end
+      else
+        (* otherwise tokenize, splitting on equals: *)
+        begin
+          split_on_eq x;
+          f xs
+        end in
+  begin
+    f argv_list;
+    List.rev (!tokens)
+  end
 
 let parse tokens =
-  let rec read_rval ts sofar = 
+  let rec read_rval ts sofar =
     match ts with
-	[] -> ([],sofar)
-      | (Id s1)::(Id s2)::ts -> ((Id s2)::ts, sofar^s1)
-      | (Eq::ts) -> read_rval ts (sofar^"=")
-      | ((Id s1)::ts) -> read_rval ts (sofar^s1) in
+      [] -> ([],sofar)
+    | (Id s1)::(Id s2)::ts -> ((Id s2)::ts, sofar^s1)
+    | (Eq::ts) -> read_rval ts (sofar^"=")
+    | ((Id s1)::ts) -> read_rval ts (sofar^s1) in
 
   let rec parse_params ts =
     match ts with
-	[] -> []
-      | ((Id s)::Eq::ts) ->
-	  let (rest_of_tokens,rval) = read_rval ts "" in
-	    (s,rval)::(parse_params rest_of_tokens)
-      | x::_ -> raise (ParseError (string_of_token x)) (* !!! Do some diagnostic here *)
+      [] -> []
+    | ((Id s)::Eq::ts) ->
+      let (rest_of_tokens,rval) = read_rval ts "" in
+      (s,rval)::(parse_params rest_of_tokens)
+    | x::_ -> raise (ParseError (string_of_token x)) (* !!! Do some diagnostic here *)
   in
 
   match tokens with
-    | ((Id cli_name)::(Id cname)::ts) ->
-	{cmdname = cname;
-	 argv0 = cli_name;
-	 params = (parse_params ts) }
-    | _ -> raise (ParseError ("No arguments given"))
+  | ((Id cli_name)::(Id cname)::ts) ->
+    {cmdname = cname;
+     argv0 = cli_name;
+     params = (parse_params ts) }
+  | _ -> raise (ParseError ("No arguments given"))
 
 let rec parse_params_2 xs =
   match xs with
-      p::ps ->
-	(* unary *)
-	if (starts_with p "--") 
-	then (String.sub p 2 (String.length p - 2),"true")::parse_params_2 ps
-	else
-	  begin
-	    (* x may be a diadic switch *)
-	    if (starts_with p "-") 
-	    then 
-	      match ps with 
-		  q::qs -> (convert_switch p,q)::parse_params_2 qs
-		| _ -> failwith (Printf.sprintf "Switch %s requires a parameter\n" p)
-	    else
-	      let list = String.split '=' p in
-	      let param_name=List.hd list in
-	      let rest = String.concat "=" (List.tl list) in
-	      (param_name,rest)::parse_params_2 ps
-	  end
-    | [] -> []
+    p::ps ->
+    (* unary *)
+    if (starts_with p "--")
+    then (String.sub p 2 (String.length p - 2),"true")::parse_params_2 ps
+    else
+      begin
+        (* x may be a diadic switch *)
+        if (starts_with p "-")
+        then
+          match ps with
+            q::qs -> (convert_switch p,q)::parse_params_2 qs
+          | _ -> failwith (Printf.sprintf "Switch %s requires a parameter\n" p)
+        else
+          let list = String.split '=' p in
+          let param_name=List.hd list in
+          let rest = String.concat "=" (List.tl list) in
+          (param_name,rest)::parse_params_2 ps
+      end
+  | [] -> []
 
 let parse_commandline arg_list =
   try
@@ -2831,7 +2977,7 @@ let parse_commandline arg_list =
     {cmdname = cmdname;
      argv0 = argv0;
      params = params}
-  with 
+  with
   | e ->
     error "Rethrowing %s as ParseError \"\"" (Printexc.to_string e);
     Backtrace.reraise e (ParseError "")
@@ -2843,7 +2989,7 @@ let parse_commandline arg_list =
 let make_list l =
   let indent = "    " in
   let rec doline cur lines cmds =
-    match cmds with [] -> List.rev (cur::lines) | cmd::cmds -> 
+    match cmds with [] -> List.rev (cur::lines) | cmd::cmds ->
       if String.length cur + String.length cmd > 74
       then doline (indent^cmd) (cur::lines) cmds
       else doline (cur^", "^cmd) lines cmds
@@ -2859,29 +3005,29 @@ let rio_help printer minimal cmd =
       let host_selectors = List.mem Host_selectors cmd_spec.flags in
       let sr_selectors = List.mem Sr_selectors cmd_spec.flags in
       let optional =
-	cmd_spec.optn @
-	  (if vm_selectors then vmselectors else []) @
-	  (if sr_selectors then srselectors else []) @
-	  (if host_selectors then hostselectors else [])
+        cmd_spec.optn @
+        (if vm_selectors then vmselectors else []) @
+        (if sr_selectors then srselectors else []) @
+        (if host_selectors then hostselectors else [])
       in
       let desc = match (vm_selectors,host_selectors,sr_selectors) with
-	| (false,false,false) -> cmd_spec.help
-	| (true,false,false) -> cmd_spec.help ^ vmselectorsinfo
-	| (false,true,false) -> cmd_spec.help ^ hostselectorsinfo
-	| (false,false,true) -> cmd_spec.help ^ srselectorsinfo
-	| _ -> cmd_spec.help (* never happens currently *)
+        | (false,false,false) -> cmd_spec.help
+        | (true,false,false) -> cmd_spec.help ^ vmselectorsinfo
+        | (false,true,false) -> cmd_spec.help ^ hostselectorsinfo
+        | (false,false,true) -> cmd_spec.help ^ srselectorsinfo
+        | _ -> cmd_spec.help (* never happens currently *)
       in
-      let recs = 
-	[("command name        ",cmd);
-	 ("reqd params     ",String.concat ", " cmd_spec.reqd);
-	 ("optional params ",String.concat ", " optional);
-	 ("description     ",desc)] in
+      let recs =
+        [("command name        ",cmd);
+         ("reqd params     ",String.concat ", " cmd_spec.reqd);
+         ("optional params ",String.concat ", " optional);
+         ("description     ",desc)] in
       printer (Cli_printer.PTable [recs])
     with
-	Not_found as e ->
-          Debug.log_backtrace e (Backtrace.get e);
-          error "Responding with Unknown command %s" cmd;
-	  printer (Cli_printer.PList ["Unknown command '"^cmd^"'"])
+      Not_found as e ->
+      Debug.log_backtrace e (Backtrace.get e);
+      error "Responding with Unknown command %s" cmd;
+      printer (Cli_printer.PList ["Unknown command '"^cmd^"'"])
   in
   let cmds = List.filter (fun (x,_) -> not (List.mem x ["server";"username";"password";"port";"minimal";"all"])) cmd.params in
   if List.length cmds > 0 then
@@ -2890,67 +3036,67 @@ let rio_help printer minimal cmd =
     let cmds = Hashtbl.fold (fun name cmd list -> ((name,cmd)::list)) cmdtable [] in
     let cmds = List.filter (fun (name,cmd) -> not (List.mem Hidden cmd.flags)) cmds in (* Filter hidden commands from help *)
     let cmds = List.sort (fun (name1,cmd1) (name2,cmd2) -> compare name1 name2) cmds in
-    
-    begin
-      if(List.mem_assoc "all" cmd.params && List.assoc "all" cmd.params = "true") then 
-	let cmds = List.map fst cmds in
-	let (host_cmds,other) = List.partition (fun n -> String.startswith "host-" n) cmds in
-	let (vm_cmds,other) = List.partition (fun n -> String.startswith "vm-" n) other in
-	
-	let h =     "Usage: "^cmd.argv0^" <command> [-s server] [-pw passwd] [-p port] [-u user] [-pwf password-file]\n" in
-	let h = h ^ "  [command specific arguments]\n\n" in
-	let h = h ^ "To get help on a specific command: "^cmd.argv0^" help <command>\n\n" in
-	let h = h ^ "Full command list\n-----------------" in
-	begin
-	  if (minimal) 
-	  then 
-	    printer (Cli_printer.PList cmds)
-	  else 
-	    begin
-	      printer (Cli_printer.PList [h]);
-	      printer (Cli_printer.PList (make_list (host_cmds)));
-	      printer (Cli_printer.PList (make_list [""]));
-	      printer (Cli_printer.PList (make_list (vm_cmds)));
-	      printer (Cli_printer.PList (make_list [""]));
-	      printer (Cli_printer.PList (make_list (other)));
-	    end
-	end
-      else
-	let cmds = List.filter (fun (name,cmd) -> List.mem Standard cmd.flags) cmds in
-	let cmds = List.map fst cmds in
-	let h =     "Usage: "^cmd.argv0^" <command> [-s server] [-pw passwd] [-p port] [-u user] [-pwf password-file]\n" in
-	let h = h ^ "  [command specific arguments]\n\n" in
-	let h = h ^ "To get help on a specific command: "^cmd.argv0^" help <command>\n" in
-	let h = h ^ "To get a full listing of commands: "^cmd.argv0^" help --all\n\n" in
 
-	let h = h ^ "Common command list\n-------------------" in
-	
-	if (minimal) 
-	then 
-	  printer (Cli_printer.PList cmds)
-	else 
-	  begin
-	    printer (Cli_printer.PList [h]);
-	    printer (Cli_printer.PList (make_list (cmds)));
-	  end
+    begin
+      if(List.mem_assoc "all" cmd.params && List.assoc "all" cmd.params = "true") then
+        let cmds = List.map fst cmds in
+        let (host_cmds,other) = List.partition (fun n -> String.startswith "host-" n) cmds in
+        let (vm_cmds,other) = List.partition (fun n -> String.startswith "vm-" n) other in
+
+        let h =     "Usage: "^cmd.argv0^" <command> [-s server] [-pw passwd] [-p port] [-u user] [-pwf password-file]\n" in
+        let h = h ^ "  [command specific arguments]\n\n" in
+        let h = h ^ "To get help on a specific command: "^cmd.argv0^" help <command>\n\n" in
+        let h = h ^ "Full command list\n-----------------" in
+        begin
+          if (minimal)
+          then
+            printer (Cli_printer.PList cmds)
+          else
+            begin
+              printer (Cli_printer.PList [h]);
+              printer (Cli_printer.PList (make_list (host_cmds)));
+              printer (Cli_printer.PList (make_list [""]));
+              printer (Cli_printer.PList (make_list (vm_cmds)));
+              printer (Cli_printer.PList (make_list [""]));
+              printer (Cli_printer.PList (make_list (other)));
+            end
+        end
+      else
+        let cmds = List.filter (fun (name,cmd) -> List.mem Standard cmd.flags) cmds in
+        let cmds = List.map fst cmds in
+        let h =     "Usage: "^cmd.argv0^" <command> [-s server] [-pw passwd] [-p port] [-u user] [-pwf password-file]\n" in
+        let h = h ^ "  [command specific arguments]\n\n" in
+        let h = h ^ "To get help on a specific command: "^cmd.argv0^" help <command>\n" in
+        let h = h ^ "To get a full listing of commands: "^cmd.argv0^" help --all\n\n" in
+
+        let h = h ^ "Common command list\n-------------------" in
+
+        if (minimal)
+        then
+          printer (Cli_printer.PList cmds)
+        else
+          begin
+            printer (Cli_printer.PList [h]);
+            printer (Cli_printer.PList (make_list (cmds)));
+          end
     end
-	
+
 
 let geneva_help printer minimal cmd =
   let docmd cmd =
     try
       let cmd_spec = Hashtbl.find cmdtable_geneva cmd in
-      let recs = 
-	[("command name        ",cmd);
-	 ("description     ",cmd_spec.help);
-	 ("reqd params     ",String.concat ", " cmd_spec.reqd);
-	 ("optional params ",String.concat ", " cmd_spec.optn)] in
+      let recs =
+        [("command name        ",cmd);
+         ("description     ",cmd_spec.help);
+         ("reqd params     ",String.concat ", " cmd_spec.reqd);
+         ("optional params ",String.concat ", " cmd_spec.optn)] in
       printer (Cli_printer.PTable [recs])
     with
-	Not_found as e ->
-          Debug.log_backtrace e (Backtrace.get e);
-          error "Responding with Unknown command %s" cmd;
-	  printer (Cli_printer.PList ["Unknown command '"^cmd^"'"])
+      Not_found as e ->
+      Debug.log_backtrace e (Backtrace.get e);
+      error "Responding with Unknown command %s" cmd;
+      printer (Cli_printer.PList ["Unknown command '"^cmd^"'"])
   in
   if List.mem_assoc "cmd" cmd.params then
     docmd (List.assoc "cmd" cmd.params)
@@ -2972,9 +3118,9 @@ let geneva_help printer minimal cmd =
       printer (Cli_printer.PList ["VM Commands:"]);
       printer (Cli_printer.PList (make_list vm_cmds))
     end
-  
+
 let cmd_help printer minimal cmd =
-	rio_help printer minimal cmd
+  rio_help printer minimal cmd
 
 
 

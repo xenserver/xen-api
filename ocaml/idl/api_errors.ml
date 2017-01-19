@@ -15,13 +15,13 @@ exception Server_error of string * string list
 
 let to_string = function
   | Server_error (name, args) ->
-      Printf.sprintf "Server_error(%s, [ %a ])" name (fun () -> String.concat "; ") args
+    Printf.sprintf "Server_error(%s, [ %a ])" name (fun () -> String.concat "; ") args
   | e -> Printexc.to_string e
 
 let _ =
   Printexc.register_printer (function
-  | Server_error(code, params) as e -> Some (to_string e)
-  | _ -> None)
+      | Server_error(code, params) as e -> Some (to_string e)
+      | _ -> None)
 
 let message_deprecated = "MESSAGE_DEPRECATED"
 let message_removed = "MESSAGE_REMOVED"
@@ -51,6 +51,8 @@ let vm_hvm_required = "VM_HVM_REQUIRED"
 let vm_no_vcpus = "VM_NO_VCPUS"
 let vm_toomany_vcpus = "VM_TOO_MANY_VCPUS"
 let vm_is_protected = "VM_IS_PROTECTED"
+let vm_is_immobile = "VM_IS_IMMOBILE"
+let vm_is_using_nested_virt = "VM_IS_USING_NESTED_VIRT"
 
 let host_in_use = "HOST_IN_USE"
 let host_in_emergency_mode = "HOST_IN_EMERGENCY_MODE"
@@ -100,6 +102,7 @@ let pif_is_physical = "PIF_IS_PHYSICAL"
 let pif_is_vlan = "PIF_IS_VLAN"
 let pif_vlan_exists = "PIF_VLAN_EXISTS"
 let pif_vlan_still_exists = "PIF_VLAN_STILL_EXISTS"
+let vlan_in_use = "VLAN_IN_USE"
 let pif_device_not_found = "PIF_DEVICE_NOT_FOUND"
 let pif_already_bonded = "PIF_ALREADY_BONDED"
 let pif_cannot_bond_cross_host = "PIF_CANNOT_BOND_CROSS_HOST"
@@ -165,6 +168,7 @@ let vm_requires_net = "VM_REQUIRES_NETWORK"
 let vm_requires_gpu = "VM_REQUIRES_GPU"
 let vm_requires_vgpu = "VM_REQUIRES_VGPU"
 let vm_requires_iommu = "VM_REQUIRES_IOMMU"
+let vm_host_incompatible_version_migrate = "VM_HOST_INCOMPATIBLE_VERSION_MIGRATE"
 let vm_host_incompatible_version = "VM_HOST_INCOMPATIBLE_VERSION"
 let vm_host_incompatible_virtual_hardware_platform_version = "VM_HOST_INCOMPATIBLE_VIRTUAL_HARDWARE_PLATFORM_VERSION"
 let vm_has_pci_attached = "VM_HAS_PCI_ATTACHED"
@@ -176,6 +180,7 @@ let vm_migrate_failed = "VM_MIGRATE_FAILED"
 let vm_missing_pv_drivers = "VM_MISSING_PV_DRIVERS"
 let vm_failed_shutdown_ack = "VM_FAILED_SHUTDOWN_ACKNOWLEDGMENT"
 let vm_old_pv_drivers = "VM_OLD_PV_DRIVERS"
+let vm_lacks_feature = "VM_LACKS_FEATURE"
 let vm_lacks_feature_shutdown = "VM_LACKS_FEATURE_SHUTDOWN"
 let vm_lacks_feature_suspend = "VM_LACKS_FEATURE_SUSPEND"
 let vm_lacks_feature_vcpu_hotplug = "VM_LACKS_FEATURE_VCPU_HOTPLUG"
@@ -246,7 +251,7 @@ let sr_operation_not_supported = "SR_OPERATION_NOT_SUPPORTED"
 let sr_not_sharable = "SR_NOT_SHARABLE"
 let sr_indestructible = "SR_INDESTRUCTIBLE"
 let clustered_sr_degraded = "CLUSTERED_SR_DEGRADED"
-  
+
 let sm_plugin_communication_failure = "SM_PLUGIN_COMMUNICATION_FAILURE"
 
 let pbd_exists = "PBD_EXISTS"
@@ -332,18 +337,31 @@ let too_busy = "TOO_BUSY"
 
 let out_of_space = "OUT_OF_SPACE"
 let invalid_patch = "INVALID_PATCH"
+let invalid_update = "INVALID_UPDATE"
 let invalid_patch_with_log = "INVALID_PATCH_WITH_LOG"
 let patch_already_exists = "PATCH_ALREADY_EXISTS"
+let update_already_exists = "UPDATE_ALREADY_EXISTS"
 let patch_is_applied = "PATCH_IS_APPLIED"
+let update_is_applied = "UPDATE_IS_APPLIED"
 let cannot_find_patch = "CANNOT_FIND_PATCH"
+let cannot_find_update = "CANNOT_FIND_UPDATE"
 let cannot_fetch_patch = "CANNOT_FETCH_PATCH"
 let patch_already_applied = "PATCH_ALREADY_APPLIED"
+let update_already_applied = "UPDATE_ALREADY_APPLIED"
+let update_already_applied_in_pool = "UPDATE_ALREADY_APPLIED_IN_POOL"
+let update_pool_apply_failed = "UPDATE_POOL_APPLY_FAILED"
+let update_apply_failed = "UPDATE_APPLY_FAILED"
+let update_precheck_failed_unknown_error = "UPDATE_PRECHECK_FAILED_UNKNOWN_ERROR"
+let update_precheck_failed_prerequisite_missing = "UPDATE_PRECHECK_FAILED_PREREQUISITE_MISSING"
+let update_precheck_failed_conflict_present = "UPDATE_PRECHECK_FAILED_CONFLICT_PRESENT"
+let update_precheck_failed_wrong_server_version = "UPDATE_PRECHECK_FAILED_WRONG_SERVER_VERSION"
 let patch_precheck_failed_unknown_error = "PATCH_PRECHECK_FAILED_UNKNOWN_ERROR"
 let patch_precheck_failed_prerequisite_missing = "PATCH_PRECHECK_FAILED_PREREQUISITE_MISSING"
 let patch_precheck_failed_wrong_server_version = "PATCH_PRECHECK_FAILED_WRONG_SERVER_VERSION"
 let patch_precheck_failed_wrong_server_build = "PATCH_PRECHECK_FAILED_WRONG_SERVER_BUILD"
 let patch_precheck_failed_vm_running = "PATCH_PRECHECK_FAILED_VM_RUNNING"
 let patch_precheck_failed_out_of_space = "PATCH_PRECHECK_FAILED_OUT_OF_SPACE"
+let update_precheck_failed_out_of_space = "UPDATE_PRECHECK_FAILED_OUT_OF_SPACE"
 let patch_precheck_tools_iso_mounted = "PATCH_PRECHECK_FAILED_ISO_MOUNTED"
 let patch_apply_failed = "PATCH_APPLY_FAILED"
 let patch_apply_failed_backup_files_exist = "PATCH_APPLY_FAILED_BACKUP_FILES_EXIST"
@@ -516,3 +534,15 @@ let sr_does_not_support_migration = "SR_DOES_NOT_SUPPORT_MIGRATION"
 let unimplemented_in_sm_backend = "UNIMPLEMENTED_IN_SM_BACKEND"
 
 let vm_call_plugin_rate_limit = "VM_CALL_PLUGIN_RATE_LIMIT"
+
+let suspend_image_not_accessible = "SUSPEND_IMAGE_NOT_ACCESSIBLE"
+
+(* PVS *)
+let pvs_site_contains_running_proxies = "PVS_SITE_CONTAINS_RUNNING_PROXIES"
+let pvs_site_contains_servers = "PVS_SITE_CONTAINS_SERVERS"
+let pvs_cache_storage_already_present = "PVS_CACHE_STORAGE_ALREADY_PRESENT"
+let pvs_cache_storage_is_in_use = "PVS_CACHE_STORAGE_IS_IN_USE"
+let pvs_proxy_already_present = "PVS_PROXY_ALREADY_PRESENT"
+let pvs_server_address_in_use = "PVS_SERVER_ADDRESS_IN_USE"
+
+let extension_protocol_failure = "EXTENSION_PROTOCOL_FAILURE"

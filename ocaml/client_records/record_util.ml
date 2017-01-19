@@ -15,7 +15,7 @@
 
 exception Record_failure of string
 
-open Xstringext
+open Stdext.Xstringext
 
 let power_state_to_string state =
   match state with
@@ -26,7 +26,7 @@ let power_state_to_string state =
   | `ShuttingDown -> "Shutting down"
   | `Migrating -> "Migrating"
 
-let vm_operation_table = 
+let vm_operation_table =
   [
     `assert_operation_valid, "assertoperationvalid";
     `changing_dynamic_range, "changing_dynamic_range";
@@ -44,7 +44,7 @@ let vm_operation_table =
     `provision, "provision";
     `destroy, "destroy";
     `export, "export";
-	`metadata_export, "metadata_export";
+    `metadata_export, "metadata_export";
     `import, "import";
     `get_boot_record, "get_boot_record";
     `data_source_op, "data_sources_op";
@@ -72,12 +72,12 @@ let vm_operation_table =
     `call_plugin, "call_plugin";
   ]
 
-let vm_operation_to_string x = 
-  if not(List.mem_assoc x vm_operation_table) 
+let vm_operation_to_string x =
+  if not(List.mem_assoc x vm_operation_table)
   then "(unknown operation)"
   else List.assoc x vm_operation_table
 
-let string_to_vm_operation x = 
+let string_to_vm_operation x =
   let table = List.map (fun (a, b) -> b, a) vm_operation_table in
   if not(List.mem_assoc x table)
   then (raise (Api_errors.Server_error(Api_errors.invalid_value, [ "blocked_operation"; x ])))
@@ -106,6 +106,7 @@ let vdi_operation_to_string = function
   | `destroy -> "destroy"
   | `force_unlock -> "force_unlock"
   | `snapshot -> "snapshot"
+  | `mirror -> "mirror"
   | `forget -> "forget"
   | `update -> "update"
   | `generate_config -> "generate_config"
@@ -124,6 +125,7 @@ let sr_operation_to_string = function
   | `vdi_resize -> "VDI.resize"
   | `vdi_clone -> "VDI.clone"
   | `vdi_snapshot -> "VDI.snapshot"
+  | `vdi_mirror -> "VDI.mirror"
   | `pbd_create -> "PBD.create"
   | `pbd_destroy -> "PBD.destroy"
 
@@ -144,17 +146,17 @@ let vif_operation_to_string = function
   | `unplug_force -> "unplug_force"
 
 let vif_locking_mode_to_string = function
-	| `network_default -> "network_default"
-	| `locked -> "locked"
-	| `unlocked -> "unlocked"
-	| `disabled -> "disabled"
+  | `network_default -> "network_default"
+  | `locked -> "locked"
+  | `unlocked -> "unlocked"
+  | `disabled -> "disabled"
 
 let string_to_vif_locking_mode = function
-	| "network_default" -> `network_default
-	| "locked" -> `locked
-	| "unlocked" -> `unlocked
-	| "disabled" -> `disabled
-	| s -> raise (Record_failure ("Expected 'network_default', 'locked', 'unlocked', 'disabled', got "^s))
+  | "network_default" -> `network_default
+  | "locked" -> `locked
+  | "unlocked" -> `unlocked
+  | "disabled" -> `disabled
+  | s -> raise (Record_failure ("Expected 'network_default', 'locked', 'unlocked', 'disabled', got "^s))
 
 let vmss_type_to_string = function
 	| `snapshot -> "snapshot"
@@ -179,13 +181,13 @@ let string_to_vmss_frequency = function
 	| s -> raise (Record_failure ("Expected 'hourly', 'daily', 'weekly', got "^s))
 
 let network_default_locking_mode_to_string = function
-	| `unlocked -> "unlocked"
-	| `disabled -> "disabled"
+  | `unlocked -> "unlocked"
+  | `disabled -> "disabled"
 
 let string_to_network_default_locking_mode = function
-	| "unlocked" -> `unlocked
-	| "disabled" -> `disabled
-	| s -> raise (Record_failure ("Expected 'unlocked' or 'disabled', got "^s))
+  | "unlocked" -> `unlocked
+  | "disabled" -> `disabled
+  | s -> raise (Record_failure ("Expected 'unlocked' or 'disabled', got "^s))
 
 let vm_appliance_operation_to_string = function
   | `start -> "start"
@@ -262,11 +264,11 @@ let cpu_feature_to_string f =
 
 let task_status_type_to_string s =
   match s with
-    | `pending -> "pending"
-    | `success -> "success"
-    | `failure -> "failure"
-    | `cancelling -> "cancelling"
-    | `cancelled -> "cancelled"
+  | `pending -> "pending"
+  | `success -> "success"
+  | `failure -> "failure"
+  | `cancelling -> "cancelling"
+  | `cancelled -> "cancelled"
 
 let protocol_to_string = function
   | `vt100 -> "VT100"
@@ -299,34 +301,34 @@ let string_to_on_normal_exit s =
   | _ -> raise (Record_failure ("Expected 'destroy' or 'restart', got "^s))
 
 let on_crash_behaviour_to_string x=
- match x with
-   `destroy -> "Destroy"
- | `coredump_and_destroy -> "Core dump and destroy"
- | `restart -> "Restart"
- | `coredump_and_restart -> "Core dump and restart"
- | `preserve -> "Preserve"
- | `rename_restart -> "Rename restart"
+  match x with
+    `destroy -> "Destroy"
+  | `coredump_and_destroy -> "Core dump and destroy"
+  | `restart -> "Restart"
+  | `coredump_and_restart -> "Core dump and restart"
+  | `preserve -> "Preserve"
+  | `rename_restart -> "Rename restart"
 
 let string_to_on_crash_behaviour s=
-	match String.lowercase s with
-	| "destroy" -> `destroy
-	| "coredump_and_destroy" -> `coredump_and_destroy
-	| "restart" -> `restart
-	| "coredump_and_restart" -> `coredump_and_restart
-	| "preserve" -> `preserve
-	| "rename_restart" -> `rename_restart
-	| _ -> raise (Record_failure ("Expected 'destroy', 'coredump_and_destroy'," ^
-		"'restart', 'coredump_and_restart', 'preserve' or 'rename_restart', got "^s))
+  match String.lowercase s with
+  | "destroy" -> `destroy
+  | "coredump_and_destroy" -> `coredump_and_destroy
+  | "restart" -> `restart
+  | "coredump_and_restart" -> `coredump_and_restart
+  | "preserve" -> `preserve
+  | "rename_restart" -> `rename_restart
+  | _ -> raise (Record_failure ("Expected 'destroy', 'coredump_and_destroy'," ^
+                                "'restart', 'coredump_and_restart', 'preserve' or 'rename_restart', got "^s))
 
 let host_display_to_string h =
-	match h with
-	| `enabled -> "enabled"
-	| `enable_on_reboot -> "enable_on_reboot"
-	| `disabled -> "disabled"
-	| `disable_on_reboot -> "disable_on_reboot"
+  match h with
+  | `enabled -> "enabled"
+  | `enable_on_reboot -> "enable_on_reboot"
+  | `disabled -> "disabled"
+  | `disable_on_reboot -> "disable_on_reboot"
 
 let pgpu_dom0_access_to_string x =
-	host_display_to_string x
+  host_display_to_string x
 
 let boot_type_to_string x =
   match x with
@@ -342,36 +344,36 @@ let string_to_boot_type s =
   | _ -> raise (Record_failure ("Expected 'bios', 'grub' or 'kernelexternal', got "^s))
 
 let string_to_vdi_onboot s =
-	match String.lowercase s with
-		| "persist" -> `persist
-		| "reset" -> `reset
-		| _ -> raise (Record_failure ("Expected 'persist' or 'reset', got "^s))
+  match String.lowercase s with
+  | "persist" -> `persist
+  | "reset" -> `reset
+  | _ -> raise (Record_failure ("Expected 'persist' or 'reset', got "^s))
 
 let string_to_vbd_mode s =
-	match String.lowercase s with
-		| "ro" -> `RO
-		| "rw" -> `RW
-		| _ -> raise (Record_failure ("Expected 'RO' or 'RW', got "^s))
+  match String.lowercase s with
+  | "ro" -> `RO
+  | "rw" -> `RW
+  | _ -> raise (Record_failure ("Expected 'RO' or 'RW', got "^s))
 
 let vbd_mode_to_string = function
-	| `RO -> "ro"
-	| `RW -> "rw"
+  | `RO -> "ro"
+  | `RW -> "rw"
 
 let string_to_vbd_type s =
-	match String.lowercase s with
-		| "cd" -> `CD
-		| "disk" -> `Disk
-		| "floppy" -> `Floppy
-		| _ -> raise (Record_failure ("Expected 'CD' or 'Disk', got "^s))
+  match String.lowercase s with
+  | "cd" -> `CD
+  | "disk" -> `Disk
+  | "floppy" -> `Floppy
+  | _ -> raise (Record_failure ("Expected 'CD' or 'Disk', got "^s))
 
 let power_to_string h =
   match h with
-      `Halted -> "halted"
-    | `Paused -> "paused"
-    | `Running -> "running"
-    | `Suspended -> "suspended"
-    | `ShuttingDown -> "shutting down"
-    | `Migrating -> "migrating"
+    `Halted -> "halted"
+  | `Paused -> "paused"
+  | `Running -> "running"
+  | `Suspended -> "suspended"
+  | `ShuttingDown -> "shutting down"
+  | `Migrating -> "migrating"
 
 let string_to_vdi_type x = match (String.lowercase x) with
   | "system" -> Some `system
@@ -383,6 +385,7 @@ let string_to_vdi_type x = match (String.lowercase x) with
   | "metadata" -> Some `metadata
   | "redo log" -> Some `redo_log
   | "rrd" -> Some `rrd
+  | "pvs_cache" -> Some `pvs_cache
   | _ -> None
 
 let vdi_type_to_string t =
@@ -396,6 +399,7 @@ let vdi_type_to_string t =
   | `metadata -> "Metadata"
   | `redo_log -> "Redo log"
   | `rrd -> "rrd"
+  | `pvs_cache -> "PVS cache"
 
 let ip_configuration_mode_to_string = function
   | `None -> "None"
@@ -454,32 +458,39 @@ let primary_address_type_of_string m =
   | s        -> raise (Record_failure ("Expected 'ipv4' or 'ipv6', got "^s))
 
 let bond_mode_to_string = function
-	| `balanceslb -> "balance-slb"
-	| `activebackup -> "active-backup"
-	| `lacp -> "lacp"
+  | `balanceslb -> "balance-slb"
+  | `activebackup -> "active-backup"
+  | `lacp -> "lacp"
 
 let bond_mode_of_string m =
-	match String.lowercase m with
-	| "balance-slb" | "" -> `balanceslb
-	| "active-backup" -> `activebackup
-	| "lacp" -> `lacp
-	| s -> raise (Record_failure ("Invalid bond mode. Got " ^ s))
+  match String.lowercase m with
+  | "balance-slb" | "" -> `balanceslb
+  | "active-backup" -> `activebackup
+  | "lacp" -> `lacp
+  | s -> raise (Record_failure ("Invalid bond mode. Got " ^ s))
 
 let allocation_algorithm_to_string = function
-	| `depth_first -> "depth-first"
-	| `breadth_first -> "breadth-first"
+  | `depth_first -> "depth-first"
+  | `breadth_first -> "breadth-first"
 
 let allocation_algorithm_of_string a =
-	match String.lowercase a with
-	| "depth-first" -> `depth_first
-	| "breadth-first" -> `breadth_first
-	| s -> raise (Record_failure ("Invalid allocation algorithm. Got " ^ s))
+  match String.lowercase a with
+  | "depth-first" -> `depth_first
+  | "breadth-first" -> `breadth_first
+  | s -> raise (Record_failure ("Invalid allocation algorithm. Got " ^ s))
+
+let pvs_proxy_status_to_string = function
+  | `stopped -> "stopped"
+  | `initialised -> "initialised"
+  | `caching -> "caching"
+  | `incompatible_write_cache_mode -> "incompatible-write-cache-mode"
+  | `incompatible_protocol_version -> "incompatible-protocol-version"
 
 let bool_of_string s =
-	match String.lowercase s with
-		|"true"|"yes"->true
-		|"false"|"no"->false
-		|_-> raise (Record_failure ("Expected 'true','yes','false','no', got "^s))
+  match String.lowercase s with
+  |"true"|"yes"->true
+  |"false"|"no"->false
+  |_-> raise (Record_failure ("Expected 'true','yes','false','no', got "^s))
 
 (* string_to_string_map_to_string *)
 let s2sm_to_string sep x =
@@ -498,15 +509,15 @@ let i642sm_to_string sep x =
   String.concat sep (List.map (fun (a,b) -> Printf.sprintf "%Ld %s" a b) x)
 
 let on_boot_to_string onboot =
-	match onboot with
-		| `reset -> "reset"
-		| `persist -> "persist"
+  match onboot with
+  | `reset -> "reset"
+  | `persist -> "persist"
 
 let tristate_to_string tristate =
-	match tristate with
-		| `yes -> "true"
-		| `no -> "false"
-		| `unspecified -> "unspecified"
+  match tristate with
+  | `yes -> "true"
+  | `no -> "false"
+  | `unspecified -> "unspecified"
 
 let wrap f err x = try f x with _ -> err x
 let generic_error x = raise (Record_failure ("Unknown value: "^x))
@@ -530,24 +541,24 @@ let bytes_of_string field x =
         raise (Record_failure (Printf.sprintf "Failed to parse field '%s': number too big (maximum = %Ld TiB)" field max_size_TiB))
       else
         raise (Record_failure (Printf.sprintf "Failed to parse field '%s': expecting an integer (possibly with suffix)" field));
-    in
+  in
   match (String.split_f (fun c -> String.isspace c || (isdigit c)) x) with
   | [] ->
-      (* no suffix on the end *)
-      int64_of_string x
+    (* no suffix on the end *)
+    int64_of_string x
   | [ suffix ] -> begin
-	let number = match (String.split_f (fun x -> not (isdigit x)) x) with
-	  | [ number ] -> int64_of_string number
-	  | _ -> raise (Record_failure (Printf.sprintf "Failed to parse field '%s': expecting an integer (possibly with suffix)" field)) in
-	let multiplier = match suffix with
-	  | "bytes" -> 1L
-	  | "KiB" -> 1024L
-	  | "MiB" -> 1024L ** 1024L
-	  | "GiB" -> 1024L ** 1024L ** 1024L
-	  | "TiB" -> 1024L ** 1024L ** 1024L ** 1024L
-	  | x -> raise (Record_failure (Printf.sprintf "Failed to parse field '%s': Unknown suffix: '%s' (try KiB, MiB, GiB or TiB)" field x)) in
-        (* FIXME: detect overflow *)
-	number ** multiplier
+      let number = match (String.split_f (fun x -> not (isdigit x)) x) with
+        | [ number ] -> int64_of_string number
+        | _ -> raise (Record_failure (Printf.sprintf "Failed to parse field '%s': expecting an integer (possibly with suffix)" field)) in
+      let multiplier = match suffix with
+        | "bytes" -> 1L
+        | "KiB" -> 1024L
+        | "MiB" -> 1024L ** 1024L
+        | "GiB" -> 1024L ** 1024L ** 1024L
+        | "TiB" -> 1024L ** 1024L ** 1024L ** 1024L
+        | x -> raise (Record_failure (Printf.sprintf "Failed to parse field '%s': Unknown suffix: '%s' (try KiB, MiB, GiB or TiB)" field x)) in
+      (* FIXME: detect overflow *)
+      number ** multiplier
     end
   | _ -> raise (Record_failure (Printf.sprintf "Failed to parse field '%s': expecting an integer (possibly with suffix)" field))
 
@@ -555,8 +566,8 @@ let bytes_of_string field x =
 
 (* generate a random mac with XenSource OUI "00:16:3e" *)
 let random_mac () =
-	let macs = [0x00; 0x16; 0x3e] @ (List.map Random.int [0x80; 0x100; 0x100]) in
-	String.concat ":" (List.map (Printf.sprintf "%02x") macs)
+  let macs = [0x00; 0x16; 0x3e] @ (List.map Random.int [0x80; 0x100; 0x100]) in
+  String.concat ":" (List.map (Printf.sprintf "%02x") macs)
 
 let mac_from_int_array macs =
   (* make sure bit 1 (local) is set and bit 0 (unicast) is clear *)
