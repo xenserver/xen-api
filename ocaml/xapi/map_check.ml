@@ -90,14 +90,14 @@ let assert_value ~field ~key ~attr ~value =
 	match ty with
 	| Enum range -> (match (mem value range) with None->err value|Some v->v)
 	| EnumSet range -> (* enumset is a comma-separated string *)
-		let vs = Xstringext.String.split ',' value in
+		let vs = Stdext.Xstringext.String.split ',' value in
 		List.fold_right
 			(fun v acc->match (mem v range) with
 				|None->err v
 				|Some v->
 					if acc="" then v
 					else begin
-						if (Xstringext.String.has_substr acc v) then err value
+						if (Stdext.Xstringext.String.has_substr acc v) then err value
 						else (v^","^acc)
 					end;
 			)

@@ -14,7 +14,6 @@
 module D = Debug.Make(struct let name="xapi" end)
 open D
 
-open Fun
 open Map_check
 
 let vmss_plugin = "vmss"
@@ -155,6 +154,7 @@ let create ~__context ~name_label ~name_description ~enabled
 	assert_retained_snapshots ~retained_snapshots;
 	let ref=Ref.make() in
 	let uuid=Uuid.to_string (Uuid.make_uuid()) in
+	let open Stdext in
 	Db.VMSS.create ~__context ~ref ~uuid
 		~name_label ~name_description ~enabled ~_type
 		~retained_snapshots ~frequency ~schedule ~last_run_time:(Date.of_float 0.);
