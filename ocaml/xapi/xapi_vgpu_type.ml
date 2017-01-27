@@ -491,18 +491,11 @@ module Intel = struct
             let vgpu_size =
               Constants.pgpu_default_size /// vgpus_per_pgpu
             in
-            let internal_config = let open Xapi_globs in
-              List.concat [
-                [ vgt_low_gm_sz, Int64.to_string conf.identifier.low_gm_sz
+            let internal_config = let open Xapi_globs in [ 
+                vgt_low_gm_sz, Int64.to_string conf.identifier.low_gm_sz
                 ; vgt_high_gm_sz, Int64.to_string conf.identifier.high_gm_sz
                 ; vgt_fence_sz, Int64.to_string conf.identifier.fence_sz
-                ]
-              ; match conf.identifier.monitor_config_file with
-                | Some monitor_config_file ->
-                  [vgt_monitor_config_file, monitor_config_file]
-                | None -> []
-              ]
-            in
+            ] in
             Some {
               vendor_name;
               model_name = conf.model_name;
