@@ -367,6 +367,52 @@ class HAHostFailedETG(EmailTextGenerator):
             'This alarm is set to be triggered when a host belonging to a high availability pool fails.' \
             '\n' % self.text
 
+class VmssSnapshotFailed(EmailTextGenerator):
+    def __init__(self,text):
+        self.text = text
+
+    def generate_subject(self):
+        self.pool_name = get_pool_name()
+        return 'Snapshot schedule failed in pool %s' %self.pool_name
+	
+    def generate_body(self):
+        body = 'The snapshot schedule failed because a snapshot could not be created on the below VM(s): \n'
+        numberOfVMsFailed = self.text.count("VM:")
+        if numberOfVMsFailed < 1:
+            body += '\nPlease check %s for more details.' % branding.BRAND_CONSOLE
+            return body
+
+        vmIndex = 1
+        while (vmIndex <= numberOfVMsFailed):
+            body += '%d) %s \n' %(vmIndex,self.text.split("VM:")[vmIndex].split("UUID:")[0].strip())
+            vmIndex += 1
+
+        body += '\nPlease check %s for more details.' % branding.BRAND_CONSOLE
+        return body
+
+class VmssSnapshotMissedEvent(EmailTextGenerator):
+    def __init__(self,text):
+        self.text = text
+
+    def generate_subject(self):
+        self.pool_name = get_pool_name()
+        return 'Snapshot schedule missed an event in pool %s' %self.pool_name
+
+    def generate_body(self):
+        return 'Unable to create snapshots at this time because the scheduled snapshot operation for' \
+                ' this policy is already in progress.'
+
+class VmssSnapshotSucceeded(EmailTextGenerator):
+    def __init__(self,text):
+        self.text = text
+
+    def generate_subject(self):
+        self.pool_name = get_pool_name()
+        return 'Snapshot schedule succeeded in pool %s' %self.pool_name
+
+    def generate_body(self):
+        return 'Snapshot schedule succeeded.'
+
 class XapiMessage:
     def __init__(self, xml):
         "Parse message XML"
@@ -455,6 +501,12 @@ class XapiMessage:
             mode_line = self.body.split()[1]
             optimization_mode = str(mode_line.split('mode:')[1])          
             etg = WlbOptimizationAlert(optimization_mode, severity)
+        elif self.name == 'VMSS_SNAPSHOT_FAILED':
+            etg = VmssSnapshotFailed(self.body)
+        elif self.name == 'VMSS_SNAPSHOT_MISSED_EVENT':
+            etg = VmssSnapshotMissedEvent(self.body)	
+        elif self.name == 'VMSS_SNAPSHOT_SUCCEEDED':
+            etg = VmssSnapshotSucceeded(self.body)
         else:
             etg = None
 
