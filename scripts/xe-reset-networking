@@ -15,17 +15,21 @@ GNU Lesser General Public License for more details.
 
 import sys
 import os
-import commands
+import subprocess
 import time
 import re
 from optparse import OptionParser
-#import XenAPI
+import XenAPI
+import signal
 
 pool_conf = '@ETCDIR@/pool.conf'
 interface_reconfigure = "@LIBEXECDIR@/interface-reconfigure"
 inventory_file = '@INVENTORY@'
 management_conf = '/etc/firstboot.d/data/management.conf'
 network_reset = '/tmp/network-reset'
+network_scripts_path = '/etc/sysconfig/network-scripts'
+
+FNULL = open(os.devnull, 'w')
 
 def read_dict_file(fname):
 	f = open(fname, 'r')
@@ -70,6 +74,8 @@ if __name__ == "__main__":
 	(options, args) = parser.parse_args()
 	
 	# Determine pool role
+	isPool = False
+	network_ref = None
 	try:
 		f = open(pool_conf, 'r')
 		try:
@@ -84,6 +90,7 @@ if __name__ == "__main__":
 					address = ls[1].strip()
 				else:
 					address = options.address
+			isPool = True
 		finally:
 			f.close()
 	except:
@@ -142,7 +149,7 @@ if __name__ == "__main__":
 			configuration.append("Gateway:                " + options.gateway)
 		if options.dns != '':
 			configuration.append("DNS server(s):          " + options.dns)
-		if master == False:
+		if isPool and master == False:
 			configuration.append("Pool master's address:  " + address)
 		warning = """----------------------------------------------------------------------
 !! WARNING !!
@@ -167,7 +174,7 @@ Type 'no' to cancel.
 			sys.exit(1)
 	
 	# Update master's IP, if needed and given
-	if master == False and options.address != None:
+	if isPool and master == False and options.address != None:
 		print "Setting master's ip (" + address + ")..."
 		try:
 			f = open(pool_conf, 'w')
@@ -180,13 +187,95 @@ Type 'no' to cancel.
 	# Construct bridge name for management interface based on convention
 	if device[:3] == 'eth':
 		bridge = 'xenbr' + device[3:]
-	else:
+	elif not vlan:
 		bridge = 'br' + device
-	
+	else:
+		print "device must be eth*, when using vlan."
+		sys.exit(1)
+
+	# Fetch bridge name for management interface if host is a slave and using vlan
+	if isPool and master == False and vlan != None:
+		print "Checking pool master reachability..."
+		def getBridgeNameViaXenAPI():
+			session = XenAPI.xapi_local()
+			session.login_with_password("", "")
+			pool_ref = session.xenapi.pool.get_all()[0]
+			master_ref = session.xenapi.pool.get_master(pool_ref)
+			management_pif_ref = session.xenapi.host.get_management_interface(master_ref)
+			vlan_xapi = session.xenapi.PIF.get_VLAN(management_pif_ref)
+			if vlan_xapi != vlan:
+				print "ERROR: vlan tag for management interface on slave should match with master."
+				print "INFO: master has management on VLAN %s, slave is asked to bring management on VLAN %s." % (vlan_xapi, vlan)
+				sys.exit(1)
+			network_ref = session.xenapi.PIF.get_network(management_pif_ref)
+			return session.xenapi.network.get_bridge(network_ref)
+
+		# Start xapi in case it might be not running
+		subprocess.call(['service', 'xapi', 'start'], stdout=FNULL, stderr=subprocess.STDOUT)
+
+		# Xapi calls might never return if master is not reachable. using 
+		# Signal module to raise alarm on timeout.
+		def handler(signum, frame):
+			raise Exception("Timed Out")
+		signal.signal(signal.SIGALRM, handler)
+
+		attempt = 1
+		while attempt <= 2:
+			try:
+				signal.alarm(30)
+				bridge = getBridgeNameViaXenAPI()
+				signal.alarm(0)
+				print "Success, continuing with emergency network reset"
+				break
+			except Exception:
+				signal.alarm(0)
+				time.sleep(5)
+				attempt += 1
+		if attempt > 2:
+			print "Pool master is currently not reachable."
+			print "Checking pool master reachability with new values..."
+			ifcfgName = "%s/ifcfg-%s.%s" % (network_scripts_path, device, vlan)
+			ifcfgData = """VLAN=yes
+DEVICE=%s.%s
+BOOTPROTO=%s
+ONBOOT=no""" % (device, vlan, options.mode)
+			if options.mode == 'static':
+				ifcfgData += """
+IPADDR=%s
+NETMASK=%s""" % (options.ip, options.netmask)
+			try:
+				# Create new interface and bring IP on it.
+				with open(ifcfgName, 'w') as f:
+					f.write(ifcfgData+"\n")
+				subprocess.call(['ifup', '%s.%s' % (device, vlan)], stdout=FNULL, stderr=subprocess.STDOUT)
+
+				# Attempt fetching bridge
+				while attempt <= 10:
+					try:
+						signal.alarm(30)
+						bridge = getBridgeNameViaXenAPI()
+						signal.alarm(0)
+						break
+					except Exception:
+						signal.alarm(0)
+						time.sleep(5)
+						attempt += 1
+				if attempt > 10:
+					print "Failed to reach master with new config. exiting..."
+					sys.exit(1)
+				print "Synced with master, continuing with emergency network reset."
+			finally:
+				try:
+					subprocess.call(['ifdown', '%s.%s' % (device, vlan)], stdout=FNULL, stderr=subprocess.STDOUT)
+				except:
+					pass
+				if os.path.exists(ifcfgName):
+					os.remove(ifcfgName)
+
 	# Ensure xapi is not running
 	print "Stopping xapi..."
 	os.system('service xapi stop >/dev/null 2>/dev/null')
-	
+
 	# Reconfigure new management interface
 	print "Reconfiguring " + device + "..."
 	if os.access('/tmp/do-not-use-networkd', os.F_OK):
@@ -197,7 +286,7 @@ Type 'no' to cancel.
 				if_args += ' --gateway=' + options.gateway
 		os.system(interface_reconfigure + if_args + ' >/dev/null 2>/dev/null')
 	else:
-		os.system('service xcp-network stop >/dev/null 2>/dev/null')
+		os.system('service xcp-networkd stop >/dev/null 2>/dev/null')
 		try: os.remove('/var/lib/xcp/networkd.db')
 		except: pass
 
