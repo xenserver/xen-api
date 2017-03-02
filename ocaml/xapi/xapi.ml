@@ -553,10 +553,21 @@ let check_network_reset () =
 
          (* Create a vlan PIF if management interface asked on a VLAN *)
          let create_vlan pif vlan =
-           let name_label = Printf.sprintf "Pool-wide network associated with %s on VLAN%s" device vlan in
-           let network = Xapi_network.create ~__context ~name_label ~name_description:"" ~mTU:1500L ~other_config:[] ~tags:[] in
-           let vlan = Xapi_vlan.create ~__context ~tagged_PIF:pif ~network ~tag:(Int64.of_string vlan) in
-           Db.VLAN.get_untagged_PIF ~__context ~self:vlan
+           (* Check if emergency network reset is on slave then use the pool management vlan network while creating vlan *)
+           let network =
+             if Pool_role.is_slave () then
+               Helpers.call_api_functions ~__context
+                 (fun rpc session_id ->
+                   let master_management_pif = Client.Client.Host.get_management_interface rpc session_id (Helpers.get_master ~__context) in
+                   Client.Client.PIF.get_network rpc session_id master_management_pif
+                 )
+             else begin
+               let name_label = Printf.sprintf "Pool-wide network associated with %s on VLAN%s" device vlan in
+               Xapi_network.create ~__context ~name_label ~name_description:"" ~mTU:1500L ~other_config:[] ~tags:[]
+             end
+           in
+           let vlan, untagged_PIF = Xapi_vlan.create_internal ~__context ~host ~tagged_PIF:pif ~network ~tag:(Int64.of_string vlan) ~device in
+           untagged_PIF
          in
 
          (* Introduce and configure the management PIF *)
