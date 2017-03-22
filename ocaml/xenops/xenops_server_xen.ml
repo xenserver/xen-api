@@ -145,9 +145,9 @@ let di_of_uuid ~xc ~xs domain_selection uuid =
 
 	let oldest_first = List.sort
 		(fun a b ->
-			let create_time x = 
-			  try 
-			    xs.Xs.read (Printf.sprintf "/vm/%s/domains/%d/create-time" uuid' x.domid) |> Int64.of_string 
+			let create_time x =
+			  try
+			    xs.Xs.read (Printf.sprintf "/vm/%s/domains/%d/create-time" uuid' x.domid) |> Int64.of_string
 			  with e ->
                             warn "Caught exception trying to find creation time of domid %d (uuid %s)" x.domid uuid';
                             warn "Defaulting to 'now'";
@@ -227,7 +227,7 @@ let destroy_vbd_frontend ~xc ~xs task disk =
 					Device.Vbd.clean_shutdown_async ~xs device;
 					Device.Vbd.clean_shutdown_wait task ~xs ~ignore_transients:true device
 				)
-		
+
 
 module Storage = struct
 	open Storage_interface
@@ -620,7 +620,7 @@ module VM = struct
 				let defaults = List.map (fun _ -> m) all_vcpus in
 				List.take vm.vcpu_max (m :: ms @ defaults) in
 		(* convert a mask into a binary string, one char per pCPU *)
-		let bitmap cpus: string = 
+		let bitmap cpus: string =
 			let cpus = List.filter (fun x -> x >= 0 && x < pcpus) cpus in
 			let result = String.make pcpus '0' in
 			List.iter (fun cpu -> result.[cpu] <- '1') cpus;
@@ -832,8 +832,8 @@ module VM = struct
 		end;
 		Domain.destroy task ~xc ~xs ~qemu_domid domid;
 		(* Detach any remaining disks *)
-		List.iter (fun dp -> 
-			try 
+		List.iter (fun dp ->
+			try
 				Storage.dp_destroy task dp
 			with e ->
 		        warn "Ignoring exception in VM.destroy: %s" (Printexc.to_string e)) dps
@@ -918,7 +918,7 @@ module VM = struct
 		},{
 			VmExtra.qemu_vbds = qemu_vbds
 		} ->
-			let make ?(boot_order="cd") ?(serial="pty") ?(monitor="pty") 
+			let make ?(boot_order="cd") ?(serial="pty") ?(monitor="pty")
 					?(nics=[])
 					?(disks=[]) ?(pci_emulations=[]) ?(usb=Device.Dm.Disabled)
 					?(parallel=None)
@@ -1061,9 +1061,9 @@ module VM = struct
 					| PV { boot = Indirect ( { devices = d :: _ } as i ) } ->
 						with_disk ~xc ~xs task d false
 							(fun dev ->
-								let b = Bootloader.extract task ~bootloader:i.bootloader 
+								let b = Bootloader.extract task ~bootloader:i.bootloader
 									~legacy_args:i.legacy_args ~extra_args:i.extra_args
-									~pv_bootloader_args:i.bootloader_args 
+									~pv_bootloader_args:i.bootloader_args
 									~disk:dev ~vm:vm.Vm.id () in
 								kernel_to_cleanup := Some b;
 								let builder_spec_info = Domain.BuildPV {
@@ -1391,7 +1391,7 @@ module VM = struct
 						let memory_target = try xs.Xs.read (local "memory/target") |> Int64.of_string |> Int64.mul 1024L with Xenbus.Xb.Noent -> 0L in
 						let memory_actual =
 							let pages = Int64.of_nativeint di.total_memory_pages in
-							let kib = Xenctrl.pages_to_kib pages in 
+							let kib = Xenctrl.pages_to_kib pages in
 							Memory.bytes_of_kib kib in
 
 						let memory_limit =
@@ -1426,9 +1426,9 @@ module VM = struct
 							    (* CA-104562: Work around probable bug in bindings *)
 							    if result > 1000.0 then begin
 							      warn "CA-104562: Got value '%d' from shadow_allocation_get" actual_shadow_mib_int;
-							      -1.0 
+							      -1.0
 							    end else result
-							  with e -> 
+							  with e ->
 							    warn "Caught exception in getting shadow allocation: %s" (Printexc.to_string e);
 							    -1.0
 							end
@@ -1670,7 +1670,7 @@ module VBD = struct
 		| VDI path ->
 			let sr, vdi = Storage.get_disk_by_name task path in
 			Storage.epoch_end task sr vdi
-		| _ -> ()		
+		| _ -> ()
 
 	let device_kind_of vbd = Device.Vbd.device_kind_of_backend_keys vbd.extra_backend_keys
 
@@ -1703,7 +1703,7 @@ module VBD = struct
 					let dp_id = _dp_id, Storage.id_of frontend_domid vbd.Vbd.id in
 					let x = {
 						Device.Vbd.mode = (match vbd.mode with
-							| ReadOnly -> Device.Vbd.ReadOnly 
+							| ReadOnly -> Device.Vbd.ReadOnly
 							| ReadWrite -> Device.Vbd.ReadWrite
 						);
 						device_number = vbd.position;
@@ -1737,7 +1737,7 @@ module VBD = struct
 						| Device_number.Ide, n, _ when n < 4 ->
 							begin match vbd.Vbd.backend with
 								| None -> None
-								| Some _ -> 
+								| Some _ ->
 									let bd = create_vbd_frontend ~xc ~xs task qemu_domid vdi in
 									let index = Device_number.to_disk_number device_number in
 									Some (index, bd)
@@ -1799,7 +1799,7 @@ module VBD = struct
 										(fun () -> Device.Vbd.release task ~xs device);
 								) device;
 							(* If we have a qemu frontend, detach this too. *)
-							Opt.iter (fun vm_t -> 
+							Opt.iter (fun vm_t ->
 								let non_persistent = vm_t.VmExtra.non_persistent in
 								if List.mem_assoc vbd.Vbd.id non_persistent.VmExtra.qemu_vbds then begin
 									let _, qemu_vbd = List.assoc vbd.Vbd.id non_persistent.VmExtra.qemu_vbds in
@@ -1815,7 +1815,7 @@ module VBD = struct
 								Storage.dp_destroy task (Storage.id_of domid vbd.Vbd.id)
 							) domid
 						)
-				with 
+				with
 					| Device_common.Device_error(_, s) ->
 						debug "Caught Device_error: %s" s;
 						raise (Device_detach_rejected("VBD", id_of vbd, s))
@@ -2048,7 +2048,7 @@ module VIF = struct
 							(fun () -> Device.Vif.release task ~xs device) in
 					destroy device;
 
-					Opt.iter (fun vm_t -> 
+					Opt.iter (fun vm_t ->
 						(* If we have a qemu frontend, detach this too. *)
 						if List.mem_assoc vif.Vif.id vm_t.VmExtra.non_persistent.VmExtra.qemu_vifs then begin
 							match (List.assoc vif.Vif.id vm_t.VmExtra.non_persistent.VmExtra.qemu_vifs) with
