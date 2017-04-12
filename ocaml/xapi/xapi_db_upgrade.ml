@@ -52,6 +52,9 @@ let clearwater = Datamodel.clearwater_release_schema_major_vsn, Datamodel.clearw
 let creedence = Datamodel.creedence_release_schema_major_vsn, Datamodel.creedence_release_schema_minor_vsn
 let cream = Datamodel.cream_release_schema_major_vsn, Datamodel.cream_release_schema_minor_vsn
 let dundee = Datamodel.dundee_release_schema_major_vsn, Datamodel.dundee_release_schema_minor_vsn
+let ely = Datamodel.ely_release_schema_major_vsn, Datamodel.ely_release_schema_minor_vsn
+let falcon = Datamodel.falcon_release_schema_major_vsn, Datamodel.falcon_release_schema_minor_vsn
+let inverness = Datamodel.inverness_release_schema_major_vsn, Datamodel.inverness_release_schema_minor_vsn
 
 (* This is to support upgrade from Dundee tech-preview versions *)
 let vsn_with_meaningful_has_vendor_device = Datamodel.meaningful_vm_has_vendor_device_schema_major_vsn, Datamodel.meaningful_vm_has_vendor_device_schema_minor_vsn

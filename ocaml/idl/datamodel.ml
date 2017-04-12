@@ -87,9 +87,12 @@ let ely_release_schema_minor_vsn = 100
 let falcon_release_schema_major_vsn = 5
 let falcon_release_schema_minor_vsn = 101
 
+let inverness_release_schema_major_vsn = 5
+let inverness_release_schema_minor_vsn = 130
+
 (* the schema vsn of the last release: used to determine whether we can upgrade or not.. *)
-let last_release_schema_major_vsn = ely_release_schema_major_vsn
-let last_release_schema_minor_vsn = ely_release_schema_minor_vsn
+let last_release_schema_major_vsn = inverness_release_schema_major_vsn
+let last_release_schema_minor_vsn = inverness_release_schema_minor_vsn
 
 (* List of tech-preview releases. Fields in these releases are not guaranteed to be retained when
  * upgrading to a full release. *)
@@ -220,6 +223,18 @@ let get_product_releases in_product_since =
       [] -> raise UnspecifiedRelease
     | x::xs -> if x=in_product_since then "closed"::x::xs else go_through_release_order xs
   in go_through_release_order release_order
+
+let inverness_release =
+  { internal = get_product_releases rel_inverness
+  ; opensource=get_oss_releases None
+  ; internal_deprecated_since=None
+  }
+
+let falcon_release =
+  { internal = get_product_releases rel_falcon
+  ; opensource=get_oss_releases None
+  ; internal_deprecated_since=None
+  }
 
 let dundee_plus_release =
   { internal = get_product_releases rel_dundee_plus
