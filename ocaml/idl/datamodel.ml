@@ -87,9 +87,12 @@ let ely_release_schema_minor_vsn = 100
 let falcon_release_schema_major_vsn = 5
 let falcon_release_schema_minor_vsn = 101
 
+let inverness_release_schema_major_vsn = 5
+let inverness_release_schema_minor_vsn = 130
+
 (* the schema vsn of the last release: used to determine whether we can upgrade or not.. *)
-let last_release_schema_major_vsn = ely_release_schema_major_vsn
-let last_release_schema_minor_vsn = ely_release_schema_minor_vsn
+let last_release_schema_major_vsn = inverness_release_schema_major_vsn
+let last_release_schema_minor_vsn = inverness_release_schema_minor_vsn
 
 (* List of tech-preview releases. Fields in these releases are not guaranteed to be retained when
  * upgrading to a full release. *)
@@ -220,6 +223,18 @@ let get_product_releases in_product_since =
       [] -> raise UnspecifiedRelease
     | x::xs -> if x=in_product_since then "closed"::x::xs else go_through_release_order xs
   in go_through_release_order release_order
+
+let inverness_release =
+  { internal = get_product_releases rel_inverness
+  ; opensource=get_oss_releases None
+  ; internal_deprecated_since=None
+  }
+
+let falcon_release =
+  { internal = get_product_releases rel_falcon
+  ; opensource=get_oss_releases None
+  ; internal_deprecated_since=None
+  }
 
 let dundee_plus_release =
   { internal = get_product_releases rel_dundee_plus
@@ -5493,6 +5508,26 @@ let bond =
       ]
     ()
 
+let vlan_introduce_params first_rel =
+  [
+    {param_type=Ref _pif; param_name="tagged_PIF"; param_doc=""; param_release=first_rel; param_default=None};
+    {param_type=Ref _pif; param_name="untagged_PIF"; param_doc=""; param_release=first_rel; param_default=None};
+    {param_type=Int; param_name="tag"; param_doc=""; param_release=first_rel; param_default=None};
+    {param_type=Map(String, String); param_name="other_config"; param_doc=""; param_release=first_rel; param_default=None};
+  ]
+
+(* vlan pool introduce is used to copy management vlan record on pool join -- it's the vlan analogue of VDI/PIF.pool_introduce *)
+let vlan_pool_introduce = call
+    ~name:"pool_introduce"
+    ~in_oss_since:None
+    ~in_product_since:rel_inverness
+    ~versioned_params:(vlan_introduce_params inverness_release)
+    ~doc:"Create a new vlan record in the database only"
+    ~result:(Ref _vlan, "The reference of the created VLAN object")
+    ~hide_from_docs:true
+    ~allowed_roles:_R_POOL_OP
+    ()
+
 let vlan_create = call
     ~name:"create"
     ~doc:"Create a VLAN mux/demuxer"
@@ -5517,7 +5552,7 @@ let vlan =
     ~doccomments:[]
     ~messages_default_allowed_roles:_R_POOL_OP
     ~doc_tags:[Networking]
-    ~messages:[ vlan_create; vlan_destroy ] ~contents:
+    ~messages:[ vlan_pool_introduce; vlan_create; vlan_destroy ] ~contents:
     ([
       uid _vlan;
       field ~qualifier:StaticRO ~ty:(Ref _pif) ~in_product_since:rel_miami "tagged_PIF" "interface on which traffic is tagged" ~default_value:(Some (VRef ""));
@@ -6675,7 +6710,7 @@ let pool_create_VLAN = call
 let pool_management_reconfigure = call
     ~name:"management_reconfigure"
     ~in_oss_since:None
-    ~in_product_since:rel_falcon
+    ~in_product_since:rel_inverness
     ~params:[
              Ref _network, "network", "The network";
     ]
