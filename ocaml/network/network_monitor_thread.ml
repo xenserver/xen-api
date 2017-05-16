@@ -181,7 +181,7 @@ let rec monitor dbg () =
 							if not carrier then
 								speed, duplex
 							else
-								let speed', duplex' = Bindings.get_status dev in
+								let speed', duplex' = Sysfs.get_status dev in
 								speed + speed', combine_duplex (duplex, duplex')
 						with _ ->
 							speed, duplex
